@@ -2,6 +2,8 @@ import { MatchEntity } from "@db/entities";
 import { ProfileResponse } from "@modules/self/dto";
 import { ApiProperty } from "@nestjs/swagger";
 import { Builder } from "builder-pattern";
+import { MatchInvitationResponse } from "./match-invitation.response";
+import { MatchType } from "@utils/enums";
 
 export class MatchResponse {
 	@ApiProperty()
@@ -22,6 +24,12 @@ export class MatchResponse {
 	@ApiProperty({ type: ProfileResponse, isArray: true })
 	participants: ProfileResponse[];
 
+	@ApiProperty({ type: MatchInvitationResponse, isArray: true })
+	invitations: MatchInvitationResponse[];
+
+	@ApiProperty({ type: Number, example: MatchType.REALTIME, enum: MatchType })
+	type: MatchType;
+
 	static fromEntity(entity: MatchEntity) {
 		return Builder(MatchResponse)
 			.id(entity.id)
@@ -36,6 +44,12 @@ export class MatchResponse {
 						)
 					: [],
 			)
+			.invitations(
+				entity.invitations
+					? entity.invitations.map((i) => MatchInvitationResponse.fromEntity(i))
+					: [],
+			)
+			.type(entity.type)
 			.build();
 	}
 
