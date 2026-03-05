@@ -25,9 +25,6 @@ export class MatchEntity {
 	@JoinColumn({ name: ColumnNames.Match.hostId })
 	host: AccountEntity;
 
-	@Column({ name: ColumnNames.Match.name, default: "New Match" })
-	name: string;
-
 	@Column({ name: ColumnNames.Match.type, default: MatchType.REALTIME })
 	type: MatchType;
 

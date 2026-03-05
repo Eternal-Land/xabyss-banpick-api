@@ -7,12 +7,8 @@ import { Injectable } from "@nestjs/common";
 import { GenshinBanpickCls } from "@utils";
 import { ClsService } from "nestjs-cls";
 import { Transactional } from "typeorm-transactional";
-import { CreateMatchRequest, MatchQuery, UpdateMatchRequest } from "./dto";
-import {
-	MatchAlreadyStartedError,
-	MatchNotFoundError,
-	ParticipantNotFoundError,
-} from "./errors";
+import { CreateMatchRequest, MatchQuery } from "./dto";
+import { MatchAlreadyStartedError, MatchNotFoundError } from "./errors";
 import { MatchEntity } from "@db/entities";
 import { SocketService } from "@modules/socket";
 import { SocketEvents } from "@utils/constants";
@@ -39,7 +35,6 @@ export class MatchService {
 		const match = await this.matchRepo.save({
 			hostId,
 			sessionCount: dto.sessionCount,
-			name: dto.name,
 			type: dto.type,
 		});
 
@@ -49,21 +44,6 @@ export class MatchService {
 				matchId: match.id,
 			})),
 		);
-
-		return match;
-	}
-
-	@Transactional()
-	async updateOne(id: string, dto: UpdateMatchRequest) {
-		let match = await this.findOne(id, { isHost: true, isNotStarted: true });
-
-		match.sessionCount = dto.sessionCount;
-		match.name = dto.name;
-		match.type = dto.type;
-
-		match = await this.matchRepo.save(match);
-
-		this.socketService.emitToMatch(id, SocketEvents.MATCH_INFO_UPDATED);
 
 		return match;
 	}
@@ -151,22 +131,5 @@ export class MatchService {
 			this.matchParticipantRepo.delete({ matchId: id }),
 		]);
 		this.socketService.emitToMatch(id, SocketEvents.MATCH_DELETED);
-	}
-
-	async leaveMatch(matchId: string) {
-		const profile = this.cls.get("profile");
-		const match = await this.findOne(matchId, { isNotStarted: true });
-		const participant = match.participants.find(
-			(p) => p.participantId === profile.id,
-		);
-		if (!participant) {
-			throw new ParticipantNotFoundError();
-		}
-		await this.matchParticipantRepo.delete(participant.id);
-		this.socketService.emitToMatch(
-			matchId,
-			SocketEvents.PARITIPANT_LEFT,
-			profile.id,
-		);
 	}
 }

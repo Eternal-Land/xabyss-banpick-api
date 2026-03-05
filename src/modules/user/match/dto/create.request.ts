@@ -19,12 +19,6 @@ export class CreateMatchRequest {
 	@Max(5)
 	sessionCount: number;
 
-	@ApiProperty({ type: String, example: "New Match" })
-	@IsString()
-	@MinLength(1)
-	@MaxLength(255)
-	name: string;
-
 	@ApiProperty({ type: Number, example: MatchType.REALTIME, enum: MatchType })
 	@IsEnum(MatchType)
 	type: MatchType;

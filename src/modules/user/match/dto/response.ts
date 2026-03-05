@@ -8,9 +8,6 @@ export class MatchResponse {
 	@ApiProperty()
 	id: string;
 
-	@ApiProperty({ type: String })
-	name: string;
-
 	@ApiProperty({ type: ProfileResponse })
 	host: ProfileResponse;
 
@@ -29,7 +26,6 @@ export class MatchResponse {
 	static fromEntity(entity: MatchEntity) {
 		return Builder(MatchResponse)
 			.id(entity.id)
-			.name(entity.name)
 			.host(entity.host ? ProfileResponse.fromEntity(entity.host) : null)
 			.sessionCount(entity.sessionCount)
 			.createdAt(entity.createdAt)

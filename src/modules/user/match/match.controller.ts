@@ -6,7 +6,6 @@ import {
 	Param,
 	ParseUUIDPipe,
 	Post,
-	Put,
 	Query,
 } from "@nestjs/common";
 import { ApiBearerAuth } from "@nestjs/swagger";
@@ -17,12 +16,7 @@ import {
 	SwaggerBaseApiMessageResponse,
 	SwaggerBaseApiResponse,
 } from "@utils";
-import {
-	CreateMatchRequest,
-	MatchQuery,
-	MatchResponse,
-	UpdateMatchRequest,
-} from "./dto";
+import { CreateMatchRequest, MatchQuery, MatchResponse } from "./dto";
 import { MatchService } from "./match.service";
 
 @Controller("/user/match")
@@ -34,17 +28,6 @@ export class MatchController {
 	@ApiBearerAuth()
 	async createOne(@Body() dto: CreateMatchRequest) {
 		const match = await this.matchService.createOne(dto);
-		return BaseApiResponse.success(MatchResponse.fromEntity(match));
-	}
-
-	@Put(":id")
-	@SwaggerBaseApiResponse(MatchResponse)
-	@ApiBearerAuth()
-	async updateOne(
-		@Param("id", ParseUUIDPipe) id: string,
-		@Body() dto: UpdateMatchRequest,
-	) {
-		const match = await this.matchService.updateOne(id, dto);
 		return BaseApiResponse.success(MatchResponse.fromEntity(match));
 	}
 
@@ -75,14 +58,6 @@ export class MatchController {
 	@ApiBearerAuth()
 	async deleteOne(@Param("id", ParseUUIDPipe) id: string) {
 		await this.matchService.deleteOne(id);
-		return BaseApiResponse.success();
-	}
-
-	@Post(":id/leave")
-	@SwaggerBaseApiMessageResponse()
-	@ApiBearerAuth()
-	async leaveMatch(@Param("id", ParseUUIDPipe) id: string) {
-		await this.matchService.leaveMatch(id);
 		return BaseApiResponse.success();
 	}
 }
