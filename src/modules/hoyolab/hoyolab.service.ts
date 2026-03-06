@@ -6,9 +6,19 @@ import { AccountCharacterRepository } from "@db/repositories/account-character.r
 import { ClsService } from "nestjs-cls";
 import { GenshinBanpickCls } from "@utils";
 import { CharacterRepository } from "@db/repositories";
+import { AccountCharacterEntity } from "@db/entities";
 
 @Injectable()
 export class HoyolabService {
+	private static readonly TRAVELLER_KEYS = [
+		"traveller_anemo",
+		"traveller_geo",
+		"traveller_electro",
+		"traveller_dendro",
+		"traveller_hydro",
+		"traveller_pyro",
+	];
+
 	constructor(
 		private readonly accountCharacterRepo: AccountCharacterRepository,
 		private readonly characterRepo: CharacterRepository,
@@ -56,6 +66,16 @@ export class HoyolabService {
 		return name.toLowerCase().replace(/\s+/g, "_");
 	}
 
+	resolveCharacterKeys(name: string) {
+		const characterKey = this.normalizeCharacterName(name);
+
+		if (characterKey === "traveler" || characterKey === "traveller") {
+			return HoyolabService.TRAVELLER_KEYS;
+		}
+
+		return [characterKey];
+	}
+
 	async syncCharacters(dto: CharacterListRequest) {
 		const currentProfileId = this.clsService.get("profile.id");
 
@@ -72,10 +92,12 @@ export class HoyolabService {
 			});
 		}
 
-		const accountCharacters = await Promise.all(
-			characterList.data.list.map(async (char) => {
-				const characterKey = this.normalizeCharacterName(char.name);
+		const toSave: AccountCharacterEntity[] = [];
 
+		for (const char of characterList.data.list) {
+			const characterKeys = this.resolveCharacterKeys(char.name);
+
+			for (const characterKey of characterKeys) {
 				const existingCharacter = await this.characterRepo.findOne({
 					where: { key: characterKey },
 				});
@@ -84,7 +106,7 @@ export class HoyolabService {
 					console.log(
 						`Character with key ${characterKey} not found in database. Skipping...`,
 					);
-					return null;
+					continue;
 				}
 
 				const existingAccountCharacter =
@@ -96,10 +118,25 @@ export class HoyolabService {
 					});
 
 				if (existingAccountCharacter) {
+					const isTravellerSync = characterKeys.length > 1;
+
+					if (isTravellerSync) {
+						console.log(
+							`AccountCharacter for character ${characterKey} already exists. Skipping...`,
+						);
+						continue;
+					}
+
 					console.log(
-						`AccountCharacter for character ${characterKey} already exists. Skipping...`,
+						`AccountCharacter for character ${characterKey} already exists. Updating...`,
 					);
-					return null;
+					existingAccountCharacter.characterLevel = char.level;
+					existingAccountCharacter.activatedConstellation =
+						char.actived_constellation_num;
+					existingAccountCharacter.isOwned = true;
+					existingAccountCharacter.notes = "Synced from Hoyolab";
+					await this.accountCharacterRepo.save(existingAccountCharacter);
+					continue;
 				}
 
 				const accountCharacter = this.accountCharacterRepo.create({
@@ -110,11 +147,10 @@ export class HoyolabService {
 					isOwned: true,
 					notes: "Synced from Hoyolab",
 				});
-				return accountCharacter;
-			}),
-		);
 
-		const toSave = accountCharacters.filter(Boolean);
+				toSave.push(accountCharacter);
+			}
+		}
 
 		if (toSave.length > 0) {
 			await this.accountCharacterRepo.save(toSave);

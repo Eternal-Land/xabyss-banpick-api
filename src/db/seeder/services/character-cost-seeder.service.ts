@@ -35,7 +35,7 @@ export class CharacterCostSeederService {
 			const costValue = costs[i];
 			const characterCost = this.characterCostRepo.create({
 				characterId: character.id,
-				constellation: i + 1,
+				constellation: i,
 				cost: costValue,
 			});
 			await this.characterCostRepo.save(characterCost);

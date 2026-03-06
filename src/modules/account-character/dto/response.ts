@@ -20,6 +20,9 @@ export class AccountCharacterResponse {
 	characterLevel: number;
 
 	@ApiProperty()
+	characterCost: number;
+
+	@ApiProperty()
 	isOwned: boolean;
 
 	@ApiProperty({ required: false })
@@ -35,6 +38,10 @@ export class AccountCharacterResponse {
 	characters: CharacterResponse;
 
 	static fromEntity(entity: AccountCharacterEntity) {
+		const accountCharacter = entity as AccountCharacterEntity & {
+			characterCost?: number;
+		};
+
 		return Builder(AccountCharacterResponse)
 			.id(entity.id)
 			.accountId(entity.accountId)
@@ -42,6 +49,7 @@ export class AccountCharacterResponse {
 			.characters(CharacterResponse.fromEntity(entity.character))
 			.activatedConstellation(entity.activatedConstellation)
 			.characterLevel(entity.characterLevel)
+			.characterCost(accountCharacter.characterCost ?? 0)
 			.isOwned(entity.isOwned)
 			.notes(entity.notes)
 			.createdAt(entity.createdAt)
