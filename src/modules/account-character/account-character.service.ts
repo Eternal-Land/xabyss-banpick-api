@@ -1,10 +1,12 @@
 import {
 	AccountCharacterRepository,
+	CharacterCostRepository,
 	CharacterRepository,
 } from "@db/repositories";
 import { Injectable } from "@nestjs/common";
 import { ClsService } from "nestjs-cls";
 import { GenshinBanpickCls } from "@utils";
+import { In } from "typeorm";
 import {
 	AccountCharacterQuery,
 	CreateAccountCharacterRequest,
@@ -20,6 +22,7 @@ import {
 export class AccountCharacterService {
 	constructor(
 		private readonly accountCharacterRepo: AccountCharacterRepository,
+		private readonly characterCostRepo: CharacterCostRepository,
 		private readonly characterRepo: CharacterRepository,
 		private readonly cls: ClsService<GenshinBanpickCls>,
 	) {}
@@ -123,7 +126,7 @@ export class AccountCharacterService {
 			throw new Error("No profile ID found in CLS context.");
 		}
 
-		const accountCharacters = this.accountCharacterRepo.find({
+		const items = await this.accountCharacterRepo.find({
 			where: {
 				accountId,
 				...(query.characterId ? { characterId: query.characterId } : {}),
@@ -148,9 +151,39 @@ export class AccountCharacterService {
 			},
 		});
 
-		const items = await accountCharacters;
+		if (!items.length) {
+			return { items, total };
+		}
 
-		return { items, total };
+		const characterIds = [...new Set(items.map((item) => item.characterId))];
+		const constellations = [
+			...new Set(items.map((item) => item.activatedConstellation)),
+		];
+
+		const characterCosts = await this.characterCostRepo.find({
+			where: {
+				characterId: In(characterIds),
+				constellation: In(constellations),
+			},
+		});
+
+		const characterCostMap = new Map<string, number>();
+		for (const characterCost of characterCosts) {
+			characterCostMap.set(
+				`${characterCost.characterId}:${characterCost.constellation}`,
+				characterCost.cost,
+			);
+		}
+
+		const accountCharacterWithCost = items.map((item) => ({
+			...item,
+			characterCost:
+				characterCostMap.get(
+					`${item.characterId}:${item.activatedConstellation}`,
+				) ?? 0,
+		}));
+
+		return { items: accountCharacterWithCost, total };
 	}
 
 	async findOne(id: string) {
