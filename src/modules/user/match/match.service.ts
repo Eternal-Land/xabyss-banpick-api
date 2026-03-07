@@ -68,12 +68,6 @@ export class MatchService {
 				);
 		}
 
-		if (query.search) {
-			matchQb.andWhere("match.name LIKE :search", {
-				search: `%${query.search}%`,
-			});
-		}
-
 		const [items, total] = await Promise.all([
 			matchQb
 				.orderBy("match.createdAt", "DESC")

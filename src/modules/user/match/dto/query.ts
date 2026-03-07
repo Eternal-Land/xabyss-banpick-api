@@ -7,9 +7,4 @@ export class MatchQuery extends PaginationQuery {
 	@IsString()
 	@IsOptional()
 	accountId?: string;
-
-	@ApiProperty({ type: String, required: false })
-	@IsString()
-	@IsOptional()
-	search?: string;
 }

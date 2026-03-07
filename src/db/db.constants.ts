@@ -106,7 +106,6 @@ export const ColumnNames = {
 		id: "match_id",
 		hostId: "host_id",
 		sessionCount: "session_count",
-		name: "match_name",
 		type: "match_type",
 		status: "match_status",
 	},
