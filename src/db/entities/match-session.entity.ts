@@ -5,10 +5,12 @@ import {
 	Index,
 	JoinColumn,
 	ManyToOne,
+	OneToMany,
 	PrimaryGeneratedColumn,
 } from "typeorm";
 import { MatchEntity } from "./match.entity";
 import { AccountEntity } from "./account.entity";
+import { BanPickSlotEntity } from "./ban-pick-slot.entity";
 
 @Entity(TableNames.MatchSession)
 export class MatchSessionEntity {
@@ -40,4 +42,35 @@ export class MatchSessionEntity {
 	@ManyToOne(() => AccountEntity, { createForeignKeyConstraints: false })
 	@JoinColumn({ name: ColumnNames.MatchSession.blueParticipantId })
 	blueParticipant: AccountEntity;
+
+	@Column({
+		name: ColumnNames.MatchSession.currentTurn,
+		type: "int",
+		default: 1,
+	})
+	currentTurn: number;
+
+	@Column({
+		name: ColumnNames.MatchSession.totalCostBlue,
+		type: "decimal",
+		precision: 7,
+		scale: 2,
+		default: 0,
+	})
+	totalCostBlue: number;
+
+	@Column({
+		name: ColumnNames.MatchSession.totalCostRed,
+		type: "decimal",
+		precision: 7,
+		scale: 2,
+		default: 0,
+	})
+	totalCostRed: number;
+
+	@Column({ name: ColumnNames.MatchSession.sessionStatus, default: "PENDING" })
+	sessionStatus: string;
+
+	@OneToMany(() => BanPickSlotEntity, (banPickSlot) => banPickSlot.matchSession)
+	banPickSlots: BanPickSlotEntity[];
 }

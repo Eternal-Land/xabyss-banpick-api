@@ -14,6 +14,7 @@ export const TableNames = {
 	Match: "match",
 	MatchSession: "match_session",
 	MatchState: "match_state",
+	BanPickSlot: "ban_pick_slot",
 };
 
 export const ColumnNames = {
@@ -115,12 +116,31 @@ export const ColumnNames = {
 		id: "match_session_id",
 		redParticipantId: "red_participant_id",
 		blueParticipantId: "blue_participant_id",
+		currentTurn: "current_turn",
+		totalCostBlue: "total_cost_blue",
+		totalCostRed: "total_cost_red",
+		sessionStatus: "session_status",
 	},
 	MatchState: {
 		id: "match_state_id",
 		host_joined: "host_joined",
 		red_player_joined: "red_player_joined",
 		blue_player_joined: "blue_player_joined",
+	},
+	BanPickSlot: {
+		id: "ban_pick_slot_id",
+		matchSessionId: "match_session_id",
+		turnIndex: "turn_index",
+		teamOrder: "team_order",
+		slotType: "slot_type",
+		matchSide: "match_side",
+		slotStatus: "slot_status",
+		characterId: "character_id",
+		weaponId: "weapon_id",
+		weaponRefinement: "weapon_refinement",
+		selectedByAccountId: "selected_by_account_id",
+		locketAt: "locked_at",
+		weaponSelectedAt: "weapon_selected_at",
 	},
 };
 

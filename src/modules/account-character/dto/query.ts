@@ -15,4 +15,8 @@ export class AccountCharacterQuery extends PaginationQuery {
 	@IsBoolean()
 	@TransformToBoolean()
 	isOwned?: boolean;
+
+	@ApiProperty({ required: false, type: String })
+	@IsOptional()
+	accountId?: string;
 }

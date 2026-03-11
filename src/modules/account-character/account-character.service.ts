@@ -121,7 +121,7 @@ export class AccountCharacterService {
 	}
 
 	async findMany(query: AccountCharacterQuery) {
-		const accountId = this.cls.get("profile.id");
+		const accountId = query.accountId || this.cls.get("profile.id");
 		if (!accountId) {
 			throw new Error("No profile ID found in CLS context.");
 		}
