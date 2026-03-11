@@ -1,7 +1,8 @@
-import { ColumnNames, TableNames } from "@db/db.constants";
+import { ColumnNames, IndexNames, TableNames } from "@db/db.constants";
 import {
 	Column,
 	Entity,
+	Index,
 	JoinColumn,
 	ManyToOne,
 	PrimaryGeneratedColumn,
@@ -14,6 +15,7 @@ export class MatchSessionEntity {
 	@PrimaryGeneratedColumn("increment", { name: ColumnNames.MatchSession.id })
 	id: number;
 
+	@Index(IndexNames.MatchSession.matchId)
 	@Column({ name: ColumnNames.Match.id })
 	matchId: string;
 
@@ -23,6 +25,7 @@ export class MatchSessionEntity {
 	@JoinColumn({ name: ColumnNames.Match.id })
 	match: MatchEntity;
 
+	@Index(IndexNames.MatchSession.redParticipantId)
 	@Column({ name: ColumnNames.MatchSession.redParticipantId })
 	redParticipantId: string;
 
@@ -30,6 +33,7 @@ export class MatchSessionEntity {
 	@JoinColumn({ name: ColumnNames.MatchSession.redParticipantId })
 	redParticipant: AccountEntity;
 
+	@Index(IndexNames.MatchSession.blueParticipantId)
 	@Column({ name: ColumnNames.MatchSession.blueParticipantId })
 	blueParticipantId: string;
 

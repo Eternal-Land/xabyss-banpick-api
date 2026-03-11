@@ -160,4 +160,18 @@ export const IndexNames = {
 	Permission: {
 		deprecated: "idx_permission_deprecated",
 	},
+	Match: {
+		hostId: "idx_match_host_id",
+		redPlayerId: "idx_match_red_player_id",
+		bluePlayerId: "idx_match_blue_player_id",
+		createdAt: "idx_match_created_at",
+	},
+	MatchSession: {
+		matchId: "idx_match_session_match_id",
+		redParticipantId: "idx_match_session_red_participant_id",
+		blueParticipantId: "idx_match_session_blue_participant_id",
+	},
+	MatchState: {
+		matchId: "uq_match_state_match_id",
+	},
 };

@@ -11,7 +11,16 @@ export class MatchStateRepository extends Repository<MatchStateEntity> {
 	async findOneOrCreate(matchId: string) {
 		let matchState = await this.findOne({ where: { matchId } });
 		if (!matchState) {
-			matchState = await this.save(this.create({ matchId }));
+			try {
+				await this.insert({ matchId });
+			} catch {
+				// Another concurrent request may have already created this row.
+			}
+
+			matchState = await this.findOne({ where: { matchId } });
+			if (!matchState) {
+				throw new Error("Failed to initialize match state");
+			}
 		}
 		return matchState;
 	}

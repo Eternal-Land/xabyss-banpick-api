@@ -35,86 +35,104 @@ export class SocketMatchService {
 	}
 
 	async joinMatchRoom(client: Socket, matchId: string) {
-		if (client.data?.currentMatchId && client.data?.currentMatchId != matchId) {
+		if (
+			client.data?.currentMatchId &&
+			client.data?.currentMatchId !== matchId
+		) {
 			throw new WsException(
 				"Already in a match room. Please leave the current match room before joining another.",
 			);
 		}
 
 		const match = await this.checkMatchExists(matchId);
-		const matchState = await this.matchStateRepository.findOneOrCreate(matchId);
-		if (matchState && client.data?.profile) {
-			const accountId = client.data.profile.id;
-			let isStateUpdated = false;
-
-			if (match.hostId == accountId) {
-				matchState.hostJoined = true;
-				isStateUpdated = true;
-			}
-
-			if (match.redPlayerId == accountId) {
-				matchState.redPlayerJoined = true;
-				isStateUpdated = true;
-			}
-
-			if (match.bluePlayerId == accountId) {
-				matchState.bluePlayerJoined = true;
-				isStateUpdated = true;
-			}
-
-			if (isStateUpdated) {
-				this.emitToMatch(
-					match.id,
-					SocketEvents.UPDATE_MATCH_STATE,
-					MatchStateResponse.fromEntity(matchState),
-				);
-				await this.matchStateRepository.save(matchState);
-			}
-		}
 		const matchRoom = this.buildMatchRoomName(matchId);
 		if (!client.rooms.has(matchRoom)) {
-			client.join(matchRoom);
+			await client.join(matchRoom);
 		}
 		client.data = { ...client.data, currentMatchId: matchId };
+
+		if (!client.data?.profile) {
+			return;
+		}
+
+		const matchState = await this.matchStateRepository.findOneOrCreate(matchId);
+		const accountId = client.data.profile.id;
+		let isStateUpdated = false;
+
+		if (match.hostId === accountId && !matchState.hostJoined) {
+			matchState.hostJoined = true;
+			isStateUpdated = true;
+		}
+
+		if (match.redPlayerId === accountId && !matchState.redPlayerJoined) {
+			matchState.redPlayerJoined = true;
+			isStateUpdated = true;
+		}
+
+		if (match.bluePlayerId === accountId && !matchState.bluePlayerJoined) {
+			matchState.bluePlayerJoined = true;
+			isStateUpdated = true;
+		}
+
+		if (isStateUpdated) {
+			const savedMatchState = await this.matchStateRepository.save(matchState);
+			this.emitToMatch(
+				match.id,
+				SocketEvents.UPDATE_MATCH_STATE,
+				MatchStateResponse.fromEntity(savedMatchState),
+			);
+		}
 	}
 
 	async leaveMatchRoom(client: Socket, matchId?: string) {
-		matchId = matchId || client.data?.currentMatchId;
-		if (!matchId) {
+		const resolvedMatchId = matchId || client.data?.currentMatchId;
+		if (!resolvedMatchId) {
 			return;
 		}
-		const match = await this.matchRepository.findOne({
-			where: { id: matchId },
-		});
-		const matchState = await this.matchStateRepository.findOneOrCreate(matchId);
-		if (match && client.data?.profile) {
-			const accountId = client.data.profile.id;
-			let isStateUpdated = false;
 
-			if (match.hostId == accountId) {
-				matchState.hostJoined = false;
-				isStateUpdated = true;
-			}
-
-			if (match.redPlayerId == accountId) {
-				matchState.redPlayerJoined = false;
-				isStateUpdated = true;
-			}
-
-			if (match.bluePlayerId == accountId) {
-				matchState.bluePlayerJoined = false;
-				isStateUpdated = true;
-			}
-
-			if (isStateUpdated) {
-				this.emitToMatch(
-					match.id,
-					SocketEvents.UPDATE_MATCH_STATE,
-					MatchStateResponse.fromEntity(matchState),
-				);
-				await this.matchStateRepository.save(matchState);
-			}
+		const matchRoom = this.buildMatchRoomName(resolvedMatchId);
+		if (client.rooms.has(matchRoom)) {
+			await client.leave(matchRoom);
 		}
-		delete client.data.currentMatchId;
+
+		if (client.data?.currentMatchId === resolvedMatchId) {
+			delete client.data.currentMatchId;
+		}
+
+		const match = await this.matchRepository.findOne({
+			where: { id: resolvedMatchId },
+		});
+		if (!match || !client.data?.profile) {
+			return;
+		}
+
+		const matchState =
+			await this.matchStateRepository.findOneOrCreate(resolvedMatchId);
+		const accountId = client.data.profile.id;
+		let isStateUpdated = false;
+
+		if (match.hostId === accountId && matchState.hostJoined) {
+			matchState.hostJoined = false;
+			isStateUpdated = true;
+		}
+
+		if (match.redPlayerId === accountId && matchState.redPlayerJoined) {
+			matchState.redPlayerJoined = false;
+			isStateUpdated = true;
+		}
+
+		if (match.bluePlayerId === accountId && matchState.bluePlayerJoined) {
+			matchState.bluePlayerJoined = false;
+			isStateUpdated = true;
+		}
+
+		if (isStateUpdated) {
+			const savedMatchState = await this.matchStateRepository.save(matchState);
+			this.emitToMatch(
+				match.id,
+				SocketEvents.UPDATE_MATCH_STATE,
+				MatchStateResponse.fromEntity(savedMatchState),
+			);
+		}
 	}
 }

@@ -1,7 +1,9 @@
 import { ColumnNames, TableNames } from "@db/db.constants";
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, Index, PrimaryGeneratedColumn } from "typeorm";
+import { IndexNames } from "@db/db.constants";
 
 @Entity(TableNames.MatchState)
+@Index(IndexNames.MatchState.matchId, ["matchId"], { unique: true })
 export class MatchStateEntity {
 	@PrimaryGeneratedColumn("uuid", { name: ColumnNames.MatchState.id })
 	id: string;
