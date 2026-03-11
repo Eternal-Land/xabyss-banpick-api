@@ -17,6 +17,7 @@ import {
 	MatchRepository,
 	NotificationRepository,
 	MatchStateRepository,
+	BanPickSlotRepository,
 } from "./repositories";
 
 const repositories = [
@@ -34,6 +35,7 @@ const repositories = [
 	MatchSessionRepository,
 	NotificationRepository,
 	MatchStateRepository,
+	BanPickSlotRepository,
 ];
 
 @Global()

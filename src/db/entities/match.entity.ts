@@ -1,8 +1,9 @@
-import { ColumnNames, TableNames } from "@db/db.constants";
+import { ColumnNames, IndexNames, TableNames } from "@db/db.constants";
 import {
 	Column,
 	CreateDateColumn,
 	Entity,
+	Index,
 	JoinColumn,
 	ManyToOne,
 	OneToMany,
@@ -17,6 +18,7 @@ export class MatchEntity {
 	@PrimaryGeneratedColumn("uuid", { name: ColumnNames.Match.id })
 	id: string;
 
+	@Index(IndexNames.Match.hostId)
 	@Column({ name: ColumnNames.Match.hostId })
 	hostId: string;
 
@@ -27,6 +29,7 @@ export class MatchEntity {
 	@Column({ name: ColumnNames.Match.type, default: MatchType.REALTIME })
 	type: MatchType;
 
+	@Index(IndexNames.Match.createdAt)
 	@CreateDateColumn({ name: ColumnNames.Global.createdAt })
 	createdAt: Date;
 
@@ -39,6 +42,7 @@ export class MatchEntity {
 	@Column({ name: ColumnNames.Match.status, default: MatchStatus.WAITING })
 	status: MatchStatus;
 
+	@Index(IndexNames.Match.redPlayerId)
 	@Column({ name: ColumnNames.Match.redPlayerId, nullable: true })
 	redPlayerId: string;
 
@@ -46,6 +50,7 @@ export class MatchEntity {
 	@JoinColumn({ name: ColumnNames.Match.redPlayerId })
 	redPlayer: AccountEntity;
 
+	@Index(IndexNames.Match.bluePlayerId)
 	@Column({ name: ColumnNames.Match.bluePlayerId, nullable: true })
 	bluePlayerId: string;
 

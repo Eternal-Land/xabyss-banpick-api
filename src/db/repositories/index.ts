@@ -12,3 +12,4 @@ export * from "./match.repository";
 export * from "./match-session.repository";
 export * from "./notification.repository";
 export * from "./match-state.repository";
+export * from "./ban-pick-slot.repository";
