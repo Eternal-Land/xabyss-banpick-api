@@ -8,6 +8,7 @@ import {
 	MatchAlreadyCompletedError,
 	MatchAlreadyStartedError,
 	MatchNotFoundError,
+	MatchParticipantInLiveMatchError,
 	MatchParticipantMustBeUniqueError,
 } from "./errors";
 import { SocketMatchService } from "@modules/socket/services";
@@ -35,6 +36,11 @@ export class MatchService {
 		}
 
 		const hostId = this.cls.get("profile.id");
+		await this.ensureParticipantsNotInLiveMatch([
+			hostId,
+			dto.redPlayerId,
+			dto.bluePlayerId,
+		]);
 
 		const match = await this.matchRepo.save({
 			hostId,
@@ -63,6 +69,26 @@ export class MatchService {
 		});
 	}
 
+	private async ensureParticipantsNotInLiveMatch(accountIds: string[]) {
+		const uniqueAccountIds = [...new Set(accountIds.filter(Boolean))];
+		if (!uniqueAccountIds.length) {
+			return;
+		}
+
+		const liveMatch = await this.matchRepo
+			.createQueryBuilder("match")
+			.where("match.status = :status", { status: MatchStatus.LIVE })
+			.andWhere(
+				"(match.hostId IN (:...accountIds) OR match.redPlayerId IN (:...accountIds) OR match.bluePlayerId IN (:...accountIds))",
+				{ accountIds: uniqueAccountIds },
+			)
+			.getOne();
+
+		if (liveMatch) {
+			throw new MatchParticipantInLiveMatchError();
+		}
+	}
+
 	async findMany(query: MatchQuery) {
 		const matchQb = this.matchRepo
 			.createQueryBuilder("match")
@@ -70,8 +96,8 @@ export class MatchService {
 
 		if (query.accountId) {
 			matchQb
-				.leftJoin("match.redPlayer", "redPlayer")
-				.leftJoin("match.bluePlayer", "bluePlayer")
+				.innerJoinAndSelect("match.redPlayer", "redPlayer")
+				.innerJoinAndSelect("match.bluePlayer", "bluePlayer")
 				.andWhere(
 					"match.hostId = :accountId OR redPlayer.id = :accountId OR bluePlayer.id = :accountId",
 					{
