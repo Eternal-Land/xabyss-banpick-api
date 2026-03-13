@@ -17,6 +17,7 @@ import { CharacterCostModule } from "@modules/admin/character-cost";
 import { AccountCharacterModule } from "@modules/account-character";
 import { UserCharacterModule } from "@modules/user/character";
 import { MatchModule } from "@modules/user/match";
+import { UserWeaponModule } from "@modules/user/weapon";
 import { WeaponCostModule } from "@modules/admin/weapon-cost";
 import { UserModule } from "@modules/user/user";
 import { SocketModule } from "@modules/socket";
@@ -46,6 +47,7 @@ import { NotificationModule } from "@modules/notification";
 		AccountCharacterModule,
 		UserCharacterModule,
 		MatchModule,
+		UserWeaponModule,
 		WeaponCostModule,
 		UserModule,
 		SocketModule,
