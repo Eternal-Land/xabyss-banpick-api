@@ -52,9 +52,6 @@ export class AccountCharacterEntity {
 	})
 	characterLevel: number;
 
-	@Column({ name: ColumnNames.AccountCharacter.isOwned, default: true })
-	isOwned: boolean;
-
 	@Column({
 		name: ColumnNames.AccountCharacter.notes,
 		type: "varchar",

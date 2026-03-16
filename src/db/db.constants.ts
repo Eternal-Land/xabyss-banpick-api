@@ -46,7 +46,6 @@ export const ColumnNames = {
 		characterId: "character_id",
 		activatedConstellation: "activated_constellation",
 		characterLevel: "character_level",
-		isOwned: "is_owned",
 		notes: "notes",
 	},
 	StaffRole: {
