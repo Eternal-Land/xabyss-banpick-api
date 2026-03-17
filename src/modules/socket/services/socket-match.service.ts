@@ -6,6 +6,9 @@ import { MatchRepository, MatchStateRepository } from "@db/repositories";
 import { SocketEvents } from "@utils/constants";
 import { WsException } from "@nestjs/websockets";
 import { MatchStateResponse } from "@modules/user/match/dto";
+import { MatchEntity } from "@db/entities";
+import { MatchStatus } from "@utils/enums";
+import { Transactional } from "typeorm-transactional";
 
 @Injectable()
 export class SocketMatchService {
@@ -148,6 +151,26 @@ export class SocketMatchService {
 				SocketEvents.UPDATE_MATCH_STATE,
 				MatchStateResponse.fromEntity(matchState),
 			);
+			if (
+				!matchState.bluePlayerJoined &&
+				!matchState.redPlayerJoined &&
+				!matchState.hostJoined
+			) {
+				await this.cancelEmptyMatch(match);
+			}
 		}
+	}
+
+	@Transactional()
+	private async cancelEmptyMatch(match: MatchEntity) {
+		if (match.status != MatchStatus.LIVE) {
+			await this.matchRepository.delete(match.id);
+		} else {
+			await this.matchRepository.update(match.id, {
+				status: MatchStatus.CANCELLED,
+			});
+			await this.matchStateRepository.delete({ matchId: match.id });
+		}
+		this.emitToMatch(match.id, SocketEvents.MATCH_DELETED, match.id);
 	}
 }
