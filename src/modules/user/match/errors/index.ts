@@ -5,3 +5,7 @@ export * from "./match-participant-must-be-unique.error";
 export * from "./match-already-completed.error";
 export * from "./match-participant-in-live-match.error";
 export * from "./not-your-turn.error";
+export * from "./character-already-used.error";
+export * from "./weapon-pick-requires-selected-character.error";
+export * from "./weapon-pick-limit-reached.error";
+export * from "./weapon-already-selected-for-side.error";
