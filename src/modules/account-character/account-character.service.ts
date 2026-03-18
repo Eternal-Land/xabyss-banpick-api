@@ -52,7 +52,6 @@ export class AccountCharacterService {
 			characterId: dto.characterId,
 			activatedConstellation: dto.activatedConstellation,
 			characterLevel: dto.characterLevel,
-			isOwned: dto.isOwned,
 			notes: dto.notes,
 		});
 
@@ -103,10 +102,6 @@ export class AccountCharacterService {
 			accountCharacter.characterLevel = dto.characterLevel;
 		}
 
-		if (dto.isOwned !== undefined) {
-			accountCharacter.isOwned = dto.isOwned;
-		}
-
 		if (dto.notes !== undefined) {
 			accountCharacter.notes = dto.notes;
 		}
@@ -121,16 +116,10 @@ export class AccountCharacterService {
 	}
 
 	async findMany(query: AccountCharacterQuery) {
-		const accountId = this.cls.get("profile.id");
-		if (!accountId) {
-			throw new Error("No profile ID found in CLS context.");
-		}
-
 		const items = await this.accountCharacterRepo.find({
 			where: {
-				accountId,
+				accountId: query.accountId,
 				...(query.characterId ? { characterId: query.characterId } : {}),
-				...(query.isOwned !== undefined ? { isOwned: query.isOwned } : {}),
 			},
 			relations: {
 				character: true,
@@ -139,20 +128,10 @@ export class AccountCharacterService {
 				character: { rarity: "DESC" },
 				characterLevel: "DESC",
 			},
-			skip: (query.page - 1) * query.take,
-			take: query.take,
-		});
-
-		const total = await this.accountCharacterRepo.count({
-			where: {
-				accountId,
-				...(query.characterId ? { characterId: query.characterId } : {}),
-				...(query.isOwned !== undefined ? { isOwned: query.isOwned } : {}),
-			},
 		});
 
 		if (!items.length) {
-			return { items, total };
+			return items;
 		}
 
 		const characterIds = [...new Set(items.map((item) => item.characterId))];
@@ -183,7 +162,7 @@ export class AccountCharacterService {
 				) ?? 0,
 		}));
 
-		return { items: accountCharacterWithCost, total };
+		return accountCharacterWithCost;
 	}
 
 	async findOne(id: string) {

@@ -20,18 +20,17 @@ export class SocketGuard implements CanActivate {
 			context.getClass(),
 		]);
 
-		if (skipAuth) {
-			return true;
-		}
-
 		if (this.hasFreshProfile(client)) {
 			return true;
 		}
 
 		try {
-			await this.socketService.syncAuthFromToken(client, true);
+			await this.socketService.syncAuthFromToken(client, !skipAuth);
 			return true;
 		} catch (error) {
+			if (skipAuth) {
+				return true;
+			}
 			if (error instanceof WsException) {
 				throw error;
 			}

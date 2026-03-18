@@ -6,6 +6,9 @@ import { MatchRepository, MatchStateRepository } from "@db/repositories";
 import { SocketEvents } from "@utils/constants";
 import { WsException } from "@nestjs/websockets";
 import { MatchStateResponse } from "@modules/user/match/dto";
+import { MatchEntity } from "@db/entities";
+import { MatchStatus } from "@utils/enums";
+import { Transactional } from "typeorm-transactional";
 
 @Injectable()
 export class SocketMatchService {
@@ -46,42 +49,45 @@ export class SocketMatchService {
 
 		const match = await this.checkMatchExists(matchId);
 		const matchRoom = this.buildMatchRoomName(matchId);
+		let matchState = await this.matchStateRepository.findOneOrCreate(matchId);
+		let isStateUpdated = false;
+
+		const accountId = client.data?.profile?.id;
+		if (accountId) {
+			if (match.hostId === accountId && !matchState.hostJoined) {
+				matchState.hostJoined = true;
+				isStateUpdated = true;
+			}
+
+			if (match.redPlayerId === accountId && !matchState.redPlayerJoined) {
+				matchState.redPlayerJoined = true;
+				isStateUpdated = true;
+			}
+
+			if (match.bluePlayerId === accountId && !matchState.bluePlayerJoined) {
+				matchState.bluePlayerJoined = true;
+				isStateUpdated = true;
+			}
+
+			if (isStateUpdated) {
+				matchState = await this.matchStateRepository.save(matchState);
+			}
+		}
+
 		if (!client.rooms.has(matchRoom)) {
-			await client.join(matchRoom);
+			client.join(matchRoom);
 		}
 		client.data = { ...client.data, currentMatchId: matchId };
 
-		if (!client.data?.profile) {
-			return;
-		}
-
-		const matchState = await this.matchStateRepository.findOneOrCreate(matchId);
-		const accountId = client.data.profile.id;
-		let isStateUpdated = false;
-
-		if (match.hostId === accountId && !matchState.hostJoined) {
-			matchState.hostJoined = true;
-			isStateUpdated = true;
-		}
-
-		if (match.redPlayerId === accountId && !matchState.redPlayerJoined) {
-			matchState.redPlayerJoined = true;
-			isStateUpdated = true;
-		}
-
-		if (match.bluePlayerId === accountId && !matchState.bluePlayerJoined) {
-			matchState.bluePlayerJoined = true;
-			isStateUpdated = true;
-		}
-
 		if (isStateUpdated) {
-			const savedMatchState = await this.matchStateRepository.save(matchState);
 			this.emitToMatch(
 				match.id,
 				SocketEvents.UPDATE_MATCH_STATE,
-				MatchStateResponse.fromEntity(savedMatchState),
+				MatchStateResponse.fromEntity(matchState),
 			);
 		}
+
+		return MatchStateResponse.fromEntity(matchState);
 	}
 
 	async leaveMatchRoom(client: Socket, matchId?: string) {
@@ -92,11 +98,11 @@ export class SocketMatchService {
 
 		const matchRoom = this.buildMatchRoomName(resolvedMatchId);
 		if (client.rooms.has(matchRoom)) {
-			await client.leave(matchRoom);
+			client.leave(matchRoom);
 		}
 
 		if (client.data?.currentMatchId === resolvedMatchId) {
-			delete client.data.currentMatchId;
+			client.data.currentMatchId = undefined;
 		}
 
 		const match = await this.matchRepository.findOne({
@@ -106,9 +112,21 @@ export class SocketMatchService {
 			return;
 		}
 
-		const matchState =
-			await this.matchStateRepository.findOneOrCreate(resolvedMatchId);
 		const accountId = client.data.profile.id;
+
+		const connectedSockets = await this.socketService.server
+			.in(matchRoom)
+			.fetchSockets();
+		const isUserStillConnected = connectedSockets.some(
+			(s) => s.id !== client.id && s.data?.profile?.id === accountId,
+		);
+
+		if (isUserStillConnected) {
+			return;
+		}
+
+		let matchState =
+			await this.matchStateRepository.findOneOrCreate(resolvedMatchId);
 		let isStateUpdated = false;
 
 		if (match.hostId === accountId && matchState.hostJoined) {
@@ -127,12 +145,32 @@ export class SocketMatchService {
 		}
 
 		if (isStateUpdated) {
-			const savedMatchState = await this.matchStateRepository.save(matchState);
+			matchState = await this.matchStateRepository.save(matchState);
 			this.emitToMatch(
 				match.id,
 				SocketEvents.UPDATE_MATCH_STATE,
-				MatchStateResponse.fromEntity(savedMatchState),
+				MatchStateResponse.fromEntity(matchState),
 			);
+			if (
+				!matchState.bluePlayerJoined &&
+				!matchState.redPlayerJoined &&
+				!matchState.hostJoined
+			) {
+				await this.cancelEmptyMatch(match);
+			}
 		}
+	}
+
+	@Transactional()
+	private async cancelEmptyMatch(match: MatchEntity) {
+		if (match.status != MatchStatus.LIVE) {
+			await this.matchRepository.delete(match.id);
+		} else {
+			await this.matchRepository.update(match.id, {
+				status: MatchStatus.CANCELLED,
+			});
+			await this.matchStateRepository.delete({ matchId: match.id });
+		}
+		this.emitToMatch(match.id, SocketEvents.MATCH_DELETED, match.id);
 	}
 }

@@ -4,8 +4,10 @@ import {
 	Delete,
 	Get,
 	Param,
+	ParseIntPipe,
 	ParseUUIDPipe,
 	Post,
+	Put,
 	Query,
 } from "@nestjs/common";
 import { ApiBearerAuth } from "@nestjs/swagger";
@@ -21,6 +23,7 @@ import {
 	MatchQuery,
 	MatchResponse,
 	MatchStateResponse,
+	UpdateMatchTurnRequest,
 } from "./dto";
 import { MatchService } from "./match.service";
 
@@ -71,6 +74,59 @@ export class MatchController {
 	@ApiBearerAuth()
 	async deleteOne(@Param("id", ParseUUIDPipe) id: string) {
 		await this.matchService.deleteOne(id);
+		return BaseApiResponse.success();
+	}
+
+	@Put(":id/start")
+	@SwaggerBaseApiMessageResponse()
+	@ApiBearerAuth()
+	async startMatch(@Param("id", ParseUUIDPipe) id: string) {
+		await this.matchService.startMatch(id);
+		return BaseApiResponse.success();
+	}
+
+	@Put(":id/turn")
+	@SwaggerBaseApiResponse(MatchStateResponse)
+	@ApiBearerAuth()
+	async updateTurn(
+		@Param("id", ParseUUIDPipe) id: string,
+		@Body() dto: UpdateMatchTurnRequest,
+	) {
+		const matchState = await this.matchService.updateTurn(id, dto.turn);
+		return BaseApiResponse.success(MatchStateResponse.fromEntity(matchState));
+	}
+
+	@Put(":id/pick-char/:charId")
+	@SwaggerBaseApiMessageResponse()
+	@ApiBearerAuth()
+	async pickChar(
+		@Param("id", ParseUUIDPipe) id: string,
+		@Param("charId", ParseIntPipe) charId: number,
+	) {
+		await this.matchService.pickChar(id, charId);
+		return BaseApiResponse.success();
+	}
+
+	@Put(":id/ban-char/:charId")
+	@SwaggerBaseApiMessageResponse()
+	@ApiBearerAuth()
+	async banChar(
+		@Param("id", ParseUUIDPipe) id: string,
+		@Param("charId", ParseIntPipe) charId: number,
+	) {
+		await this.matchService.banChar(id, charId);
+		return BaseApiResponse.success();
+	}
+
+	@Put(":id/pick-weapon/:charId/:weaponId")
+	@SwaggerBaseApiMessageResponse()
+	@ApiBearerAuth()
+	async pickWeapon(
+		@Param("id", ParseUUIDPipe) id: string,
+		@Param("charId", ParseIntPipe) charId: number,
+		@Param("weaponId") weaponId: string,
+	) {
+		await this.matchService.pickWeapon(id, charId, weaponId);
 		return BaseApiResponse.success();
 	}
 }

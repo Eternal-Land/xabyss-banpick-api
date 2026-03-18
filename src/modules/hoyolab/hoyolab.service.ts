@@ -133,7 +133,6 @@ export class HoyolabService {
 					existingAccountCharacter.characterLevel = char.level;
 					existingAccountCharacter.activatedConstellation =
 						char.actived_constellation_num;
-					existingAccountCharacter.isOwned = true;
 					existingAccountCharacter.notes = "Synced from Hoyolab";
 					await this.accountCharacterRepo.save(existingAccountCharacter);
 					continue;
@@ -144,7 +143,6 @@ export class HoyolabService {
 					characterId: existingCharacter.id,
 					characterLevel: char.level,
 					activatedConstellation: char.actived_constellation_num,
-					isOwned: true,
 					notes: "Synced from Hoyolab",
 				});
 

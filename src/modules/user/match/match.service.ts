@@ -1,18 +1,34 @@
-import { MatchRepository, MatchStateRepository } from "@db/repositories";
+import {
+	AccountCharacterRepository,
+	MatchRepository,
+	MatchSessionRepository,
+	MatchStateRepository,
+	WeaponRepository,
+} from "@db/repositories";
+import { MatchEntity, MatchStateEntity } from "@db/entities";
 import { Injectable } from "@nestjs/common";
+import { AccountCharacterNotFoundError } from "@modules/account-character/errors";
+import { WeaponNotFoundError } from "@modules/admin/weapon/errors";
+import { MatchStateResponse } from "@modules/user/match/dto";
 import { GenshinBanpickCls } from "@utils";
+import { MatchStatus, PlayerSide } from "@utils/enums";
 import { ClsService } from "nestjs-cls";
 import { Transactional } from "typeorm-transactional";
 import { CreateMatchRequest, MatchQuery } from "./dto";
 import {
 	MatchAlreadyCompletedError,
 	MatchAlreadyStartedError,
+	CharacterAlreadyUsedError,
 	MatchNotFoundError,
+	MatchParticipantInLiveMatchError,
 	MatchParticipantMustBeUniqueError,
+	NotYourTurnError,
+	ParticipantNotFoundError,
+	WeaponAlreadySelectedForSideError,
+	WeaponPickRequiresSelectedCharacterError,
 } from "./errors";
 import { SocketMatchService } from "@modules/socket/services";
 import { SocketEvents } from "@utils/constants";
-import { MatchStatus } from "@utils/enums";
 
 interface FindOneOptions {
 	isHost?: boolean;
@@ -26,6 +42,9 @@ export class MatchService {
 		private readonly cls: ClsService<GenshinBanpickCls>,
 		private readonly socketMatchService: SocketMatchService,
 		private readonly matchStateRepo: MatchStateRepository,
+		private readonly matchSessionRepo: MatchSessionRepository,
+		private readonly accountCharacterRepo: AccountCharacterRepository,
+		private readonly weaponRepo: WeaponRepository,
 	) {}
 
 	@Transactional()
@@ -35,6 +54,11 @@ export class MatchService {
 		}
 
 		const hostId = this.cls.get("profile.id");
+		await this.ensureParticipantsNotInLiveMatch([
+			hostId,
+			dto.redPlayerId,
+			dto.bluePlayerId,
+		]);
 
 		const match = await this.matchRepo.save({
 			hostId,
@@ -57,10 +81,35 @@ export class MatchService {
 		if (existed) {
 			await this.matchStateRepo.delete({ matchId });
 		}
-
-		await this.matchStateRepo.save({
+		await this.matchStateRepo.insert({
 			matchId,
+			blueBanChars: [],
+			blueSelectedChars: [],
+			blueSelectedWeapons: [],
+			redBanChars: [],
+			redSelectedChars: [],
+			redSelectedWeapons: [],
 		});
+	}
+
+	private async ensureParticipantsNotInLiveMatch(accountIds: string[]) {
+		const uniqueAccountIds = [...new Set(accountIds.filter(Boolean))];
+		if (!uniqueAccountIds.length) {
+			return;
+		}
+
+		const liveMatch = await this.matchRepo
+			.createQueryBuilder("match")
+			.where("match.status = :status", { status: MatchStatus.LIVE })
+			.andWhere(
+				"(match.hostId IN (:...accountIds) OR match.redPlayerId IN (:...accountIds) OR match.bluePlayerId IN (:...accountIds))",
+				{ accountIds: uniqueAccountIds },
+			)
+			.getOne();
+
+		if (liveMatch) {
+			throw new MatchParticipantInLiveMatchError();
+		}
 	}
 
 	async findMany(query: MatchQuery) {
@@ -70,8 +119,8 @@ export class MatchService {
 
 		if (query.accountId) {
 			matchQb
-				.leftJoin("match.redPlayer", "redPlayer")
-				.leftJoin("match.bluePlayer", "bluePlayer")
+				.innerJoinAndSelect("match.redPlayer", "redPlayer")
+				.innerJoinAndSelect("match.bluePlayer", "bluePlayer")
 				.andWhere(
 					"match.hostId = :accountId OR redPlayer.id = :accountId OR bluePlayer.id = :accountId",
 					{
@@ -125,9 +174,235 @@ export class MatchService {
 	async getMatchState(matchId: string) {
 		// check exists
 		const match = await this.findOne(matchId);
-		if ([MatchStatus.COMPLETED, MatchStatus.CANCELED].includes(match.status)) {
+		if ([MatchStatus.COMPLETED, MatchStatus.CANCELLED].includes(match.status)) {
 			throw new MatchAlreadyCompletedError();
 		}
 		return await this.matchStateRepo.findOneOrCreate(matchId);
+	}
+
+	async startMatch(matchId: string) {
+		await this.findOne(matchId, { isHost: true, isNotStarted: true });
+		await this.matchRepo.update(matchId, { status: MatchStatus.LIVE });
+		this.socketMatchService.emitToMatch(matchId, SocketEvents.MATCH_STARTED);
+	}
+
+	@Transactional()
+	async updateTurn(matchId: string, turn: PlayerSide) {
+		const accountId = this.cls.get("profile.id");
+		const match = await this.findOne(matchId);
+
+		if ([MatchStatus.COMPLETED, MatchStatus.CANCELLED].includes(match.status)) {
+			throw new MatchAlreadyCompletedError();
+		}
+
+		const isParticipant = [
+			match.hostId,
+			match.bluePlayerId,
+			match.redPlayerId,
+		].includes(accountId);
+
+		if (!isParticipant) {
+			throw new ParticipantNotFoundError();
+		}
+
+		const matchState = await this.matchStateRepo.findOneOrCreate(matchId);
+		matchState.currentTurn = turn;
+
+		return await this.saveAndBroadcastMatchState(matchId, matchState);
+	}
+
+	private getPlayerSide(match: MatchEntity, playerId: string) {
+		if (playerId === match.bluePlayerId) {
+			return PlayerSide.BLUE;
+		}
+
+		if (playerId === match.redPlayerId) {
+			return PlayerSide.RED;
+		}
+
+		return null;
+	}
+
+	private ensureCorrectTurn(
+		matchState: MatchStateEntity,
+		playerSide: PlayerSide,
+	) {
+		if (matchState.currentTurn !== playerSide) {
+			throw new NotYourTurnError();
+		}
+	}
+
+	private ensureCharacterNotUsed(
+		matchState: MatchStateEntity,
+		characterName: string,
+	) {
+		const usedCharacters = new Set<string>([
+			...matchState.blueBanChars,
+			...matchState.blueSelectedChars,
+			...matchState.redBanChars,
+			...matchState.redSelectedChars,
+		]);
+
+		if (usedCharacters.has(characterName)) {
+			throw new CharacterAlreadyUsedError();
+		}
+	}
+
+	private async saveAndBroadcastMatchState(
+		matchId: string,
+		matchState: MatchStateEntity,
+	) {
+		const savedMatchState = await this.matchStateRepo.save(matchState);
+		this.socketMatchService.emitToMatch(
+			matchId,
+			SocketEvents.UPDATE_MATCH_STATE,
+			MatchStateResponse.fromEntity(savedMatchState),
+		);
+		return savedMatchState;
+	}
+
+	@Transactional()
+	async pickChar(matchId: string, charId: number) {
+		const playerId = this.cls.get("profile.id");
+		const match = await this.findOne(matchId);
+		if ([MatchStatus.COMPLETED, MatchStatus.CANCELLED].includes(match.status)) {
+			throw new MatchAlreadyCompletedError();
+		}
+		const matchState = await this.matchStateRepo.findOneOrCreate(matchId);
+		const playerSide = this.getPlayerSide(match, playerId);
+		if (playerSide === null) {
+			throw new MatchNotFoundError();
+		}
+
+		this.ensureCorrectTurn(matchState, playerSide);
+
+		const selectedAccountCharacter = await this.accountCharacterRepo.findOne({
+			where: {
+				characterId: charId,
+				accountId: playerId,
+			},
+		});
+
+		if (!selectedAccountCharacter) {
+			throw new AccountCharacterNotFoundError();
+		}
+
+		const selectedCharacterId = String(charId);
+
+		this.ensureCharacterNotUsed(matchState, selectedCharacterId);
+
+		if (playerSide === PlayerSide.BLUE) {
+			matchState.blueSelectedChars = [
+				...(matchState.blueSelectedChars || []),
+				selectedCharacterId,
+			];
+		} else {
+			matchState.redSelectedChars = [
+				...(matchState.redSelectedChars || []),
+				selectedCharacterId,
+			];
+		}
+		await this.saveAndBroadcastMatchState(matchId, matchState);
+	}
+
+	@Transactional()
+	async banChar(matchId: string, charId: number) {
+		const playerId = this.cls.get("profile.id");
+		const match = await this.findOne(matchId);
+		if ([MatchStatus.COMPLETED, MatchStatus.CANCELLED].includes(match.status)) {
+			throw new MatchAlreadyCompletedError();
+		}
+		const matchState = await this.matchStateRepo.findOneOrCreate(matchId);
+		const playerSide = this.getPlayerSide(match, playerId);
+		if (playerSide === null) {
+			throw new MatchNotFoundError();
+		}
+
+		this.ensureCorrectTurn(matchState, playerSide);
+
+		const selectedCharacterId = String(charId);
+
+		this.ensureCharacterNotUsed(matchState, selectedCharacterId);
+
+		if (playerSide === PlayerSide.BLUE) {
+			matchState.blueBanChars = [
+				...(matchState.blueBanChars || []),
+				selectedCharacterId,
+			];
+		} else {
+			matchState.redBanChars = [
+				...(matchState.redBanChars || []),
+				selectedCharacterId,
+			];
+		}
+		await this.saveAndBroadcastMatchState(matchId, matchState);
+	}
+
+	@Transactional()
+	async pickWeapon(matchId: string, charId: number, weaponId: string) {
+		const playerId = this.cls.get("profile.id");
+		const match = await this.findOne(matchId);
+		if ([MatchStatus.COMPLETED, MatchStatus.CANCELLED].includes(match.status)) {
+			throw new MatchAlreadyCompletedError();
+		}
+		const matchState = await this.matchStateRepo.findOneOrCreate(matchId);
+		const playerSide = this.getPlayerSide(match, playerId);
+		if (playerSide === null) {
+			throw new MatchNotFoundError();
+		}
+
+		const normalizedWeaponId = Number(weaponId);
+		if (!Number.isInteger(normalizedWeaponId) || normalizedWeaponId <= 0) {
+			throw new WeaponNotFoundError();
+		}
+
+		const weapon = await this.weaponRepo.findOne({
+			where: {
+				id: normalizedWeaponId,
+				isActive: true,
+			},
+		});
+
+		if (!weapon) {
+			throw new WeaponNotFoundError();
+		}
+
+		const sideSelectedChars =
+			playerSide === PlayerSide.BLUE
+				? matchState.blueSelectedChars || []
+				: matchState.redSelectedChars || [];
+		const sideSelectedWeapons =
+			playerSide === PlayerSide.BLUE
+				? matchState.blueSelectedWeapons || []
+				: matchState.redSelectedWeapons || [];
+
+		if (!sideSelectedChars.length) {
+			throw new WeaponPickRequiresSelectedCharacterError();
+		}
+
+		const selectedCharKey = String(charId);
+		const selectedCharSlotIndex = sideSelectedChars.indexOf(selectedCharKey);
+		if (selectedCharSlotIndex < 0) {
+			throw new AccountCharacterNotFoundError();
+		}
+
+		const weaponKey = String(normalizedWeaponId);
+		const duplicatedWeaponIndex = sideSelectedWeapons.indexOf(weaponKey);
+		if (
+			duplicatedWeaponIndex >= 0 &&
+			duplicatedWeaponIndex !== selectedCharSlotIndex
+		) {
+			throw new WeaponAlreadySelectedForSideError();
+		}
+
+		const nextSideSelectedWeapons = [...sideSelectedWeapons];
+		nextSideSelectedWeapons[selectedCharSlotIndex] = weaponKey;
+
+		if (playerSide === PlayerSide.BLUE) {
+			matchState.blueSelectedWeapons = nextSideSelectedWeapons;
+		} else {
+			matchState.redSelectedWeapons = nextSideSelectedWeapons;
+		}
+		await this.saveAndBroadcastMatchState(matchId, matchState);
 	}
 }

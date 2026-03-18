@@ -12,3 +12,4 @@ export * from "./match.entity";
 export * from "./match-session.entity";
 export * from "./notification.entity";
 export * from "./match-state.entity";
+export * from "./ban-pick-slot.entity";

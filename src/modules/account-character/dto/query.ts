@@ -1,18 +1,15 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { PaginationQuery, TransformToBoolean } from "@utils";
 import { Type } from "class-transformer";
-import { IsBoolean, IsNumber, IsOptional } from "class-validator";
+import { IsNumber, IsOptional, IsString } from "class-validator";
 
-export class AccountCharacterQuery extends PaginationQuery {
+export class AccountCharacterQuery {
 	@ApiProperty({ required: false, type: Number })
 	@IsOptional()
 	@IsNumber()
 	@Type(() => Number)
 	characterId?: number;
 
-	@ApiProperty({ required: false, type: Boolean })
-	@IsOptional()
-	@IsBoolean()
-	@TransformToBoolean()
-	isOwned?: boolean;
+	@ApiProperty({ required: true, type: String })
+	@IsString()
+	accountId: string;
 }

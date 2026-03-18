@@ -46,7 +46,7 @@ export class MyExceptionFilter implements ExceptionFilter {
 		}
 
 		return res
-			.status(200)
+			.status(500)
 			.send(
 				BaseApiResponse.error(
 					ErrorCode.UNKNOWN_ERROR,

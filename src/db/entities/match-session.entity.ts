@@ -5,10 +5,11 @@ import {
 	Index,
 	JoinColumn,
 	ManyToOne,
+	OneToMany,
 	PrimaryGeneratedColumn,
 } from "typeorm";
 import { MatchEntity } from "./match.entity";
-import { AccountEntity } from "./account.entity";
+import { BanPickSlotEntity } from "./ban-pick-slot.entity";
 
 @Entity(TableNames.MatchSession)
 export class MatchSessionEntity {
@@ -25,19 +26,27 @@ export class MatchSessionEntity {
 	@JoinColumn({ name: ColumnNames.Match.id })
 	match: MatchEntity;
 
-	@Index(IndexNames.MatchSession.redParticipantId)
-	@Column({ name: ColumnNames.MatchSession.redParticipantId })
-	redParticipantId: string;
+	@Column({
+		name: ColumnNames.MatchSession.totalCostBlue,
+		type: "decimal",
+		precision: 7,
+		scale: 2,
+		default: 0,
+	})
+	totalCostBlue: number;
 
-	@ManyToOne(() => AccountEntity, { createForeignKeyConstraints: false })
-	@JoinColumn({ name: ColumnNames.MatchSession.redParticipantId })
-	redParticipant: AccountEntity;
+	@Column({
+		name: ColumnNames.MatchSession.totalCostRed,
+		type: "decimal",
+		precision: 7,
+		scale: 2,
+		default: 0,
+	})
+	totalCostRed: number;
 
-	@Index(IndexNames.MatchSession.blueParticipantId)
-	@Column({ name: ColumnNames.MatchSession.blueParticipantId })
-	blueParticipantId: string;
+	@Column({ name: ColumnNames.MatchSession.sessionStatus, default: "PENDING" })
+	sessionStatus: string;
 
-	@ManyToOne(() => AccountEntity, { createForeignKeyConstraints: false })
-	@JoinColumn({ name: ColumnNames.MatchSession.blueParticipantId })
-	blueParticipant: AccountEntity;
+	@OneToMany(() => BanPickSlotEntity, (banPickSlot) => banPickSlot.matchSession)
+	banPickSlots: BanPickSlotEntity[];
 }

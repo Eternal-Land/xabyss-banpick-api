@@ -22,9 +22,6 @@ export class AccountCharacterResponse {
 	@ApiProperty()
 	characterCost: number;
 
-	@ApiProperty()
-	isOwned: boolean;
-
 	@ApiProperty({ required: false })
 	notes?: string;
 
@@ -50,7 +47,6 @@ export class AccountCharacterResponse {
 			.activatedConstellation(entity.activatedConstellation)
 			.characterLevel(entity.characterLevel)
 			.characterCost(accountCharacter.characterCost ?? 0)
-			.isOwned(entity.isOwned)
 			.notes(entity.notes)
 			.createdAt(entity.createdAt)
 			.updatedAt(entity.updatedAt)

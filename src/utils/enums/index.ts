@@ -6,3 +6,4 @@ export * from "./weapon-rarity";
 export * from "./weapon-cost-unit";
 export * from "./match-type";
 export * from "./match-status";
+export * from "./player-side";

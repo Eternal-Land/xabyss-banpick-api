@@ -1,12 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import {
-	IsBoolean,
-	IsInt,
-	IsOptional,
-	IsString,
-	Max,
-	Min,
-} from "class-validator";
+import { IsInt, IsOptional, IsString, Max, Min } from "class-validator";
 
 export class CreateAccountCharacterRequest {
 	@ApiProperty()
@@ -25,11 +18,6 @@ export class CreateAccountCharacterRequest {
 	@IsInt()
 	@Min(0)
 	characterLevel?: number;
-
-	@ApiProperty({ required: false })
-	@IsOptional()
-	@IsBoolean()
-	isOwned?: boolean;
 
 	@ApiProperty({ required: false })
 	@IsOptional()

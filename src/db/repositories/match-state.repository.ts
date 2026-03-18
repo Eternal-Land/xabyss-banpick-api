@@ -12,7 +12,15 @@ export class MatchStateRepository extends Repository<MatchStateEntity> {
 		let matchState = await this.findOne({ where: { matchId } });
 		if (!matchState) {
 			try {
-				await this.insert({ matchId });
+				await this.insert({
+					matchId,
+					blueBanChars: [],
+					blueSelectedChars: [],
+					blueSelectedWeapons: [],
+					redBanChars: [],
+					redSelectedChars: [],
+					redSelectedWeapons: [],
+				});
 			} catch {
 				// Another concurrent request may have already created this row.
 			}

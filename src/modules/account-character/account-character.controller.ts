@@ -18,7 +18,6 @@ import {
 } from "./dto";
 import {
 	BaseApiResponse,
-	PaginationDto,
 	SwaggerBaseApiMessageResponse,
 	SwaggerBaseApiResponse,
 } from "@utils";
@@ -58,13 +57,11 @@ export class AccountCharacterController {
 	@Get()
 	@SwaggerBaseApiResponse(AccountCharacterResponse, {
 		isArray: true,
-		withPagination: true,
 	})
 	async findMany(@Query() query: AccountCharacterQuery) {
-		const { items, total } = await this.accountCharacterService.findMany(query);
-		return BaseApiResponse.successWithPagination(
+		const items = await this.accountCharacterService.findMany(query);
+		return BaseApiResponse.success(
 			AccountCharacterResponse.fromEntities(items),
-			PaginationDto.from(query.page, query.take, total),
 		);
 	}
 
