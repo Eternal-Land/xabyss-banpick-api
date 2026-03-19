@@ -20,7 +20,6 @@ import {
 	MatchAlreadyStartedError,
 	CharacterAlreadyUsedError,
 	MatchNotFoundError,
-	MatchParticipantInLiveMatchError,
 	MatchParticipantMustBeUniqueError,
 	NotYourTurnError,
 	ParticipantNotFoundError,
@@ -54,11 +53,6 @@ export class MatchService {
 		}
 
 		const hostId = this.cls.get("profile.id");
-		await this.ensureParticipantsNotInLiveMatch([
-			hostId,
-			dto.redPlayerId,
-			dto.bluePlayerId,
-		]);
 
 		const match = await this.matchRepo.save({
 			hostId,
@@ -90,26 +84,6 @@ export class MatchService {
 			redSelectedChars: [],
 			redSelectedWeapons: [],
 		});
-	}
-
-	private async ensureParticipantsNotInLiveMatch(accountIds: string[]) {
-		const uniqueAccountIds = [...new Set(accountIds.filter(Boolean))];
-		if (!uniqueAccountIds.length) {
-			return;
-		}
-
-		const liveMatch = await this.matchRepo
-			.createQueryBuilder("match")
-			.where("match.status = :status", { status: MatchStatus.LIVE })
-			.andWhere(
-				"(match.hostId IN (:...accountIds) OR match.redPlayerId IN (:...accountIds) OR match.bluePlayerId IN (:...accountIds))",
-				{ accountIds: uniqueAccountIds },
-			)
-			.getOne();
-
-		if (liveMatch) {
-			throw new MatchParticipantInLiveMatchError();
-		}
 	}
 
 	async findMany(query: MatchQuery) {

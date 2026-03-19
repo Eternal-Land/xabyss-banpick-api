@@ -22,6 +22,7 @@ import { WeaponCostModule } from "@modules/admin/weapon-cost";
 import { UserModule } from "@modules/user/user";
 import { SocketModule } from "@modules/socket";
 import { NotificationModule } from "@modules/notification";
+import { CronModule } from "@modules/cron";
 
 @Module({
 	imports: [
@@ -52,6 +53,7 @@ import { NotificationModule } from "@modules/notification";
 		UserModule,
 		SocketModule,
 		NotificationModule,
+		CronModule,
 	],
 	controllers: [],
 	providers: [
