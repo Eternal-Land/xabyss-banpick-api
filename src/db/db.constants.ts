@@ -10,11 +10,13 @@ export const TableNames = {
 	CharacterCost: "character_cost",
 	CostMilestone: "cost_milestone",
 	WeaponCost: "weapon_cost",
+	CharacterLevelCost: "character_level_cost",
 	Notification: "notification",
 	Match: "match",
 	MatchSession: "match_session",
 	MatchState: "match_state",
 	BanPickSlot: "ban_pick_slot",
+	SessionCost: "session_cost",
 };
 
 export const ColumnNames = {
@@ -96,6 +98,12 @@ export const ColumnNames = {
 		value: "value",
 		upgradeLevel: "upgrade_level",
 	},
+	CharacterLevelCost: {
+		id: "character_level_cost_id",
+		characterId: "character_id",
+		level: "character_level",
+		cost: "level_cost",
+	},
 	Notification: {
 		id: "notification_id",
 		type: "notification_type",
@@ -149,6 +157,22 @@ export const ColumnNames = {
 		locketAt: "locked_at",
 		weaponSelectedAt: "weapon_selected_at",
 	},
+	SessionCost: {
+		id: "session_cost_id",
+		matchSessionId: "match_session_id",
+		blueTotalCost: "blue_total_cost",
+		blueCostMilestone: "blue_cost_milestone",
+		blueConstellationCost: "blue_constellation_cost",
+		blueRefinementCost: "blue_refinement_cost",
+		blueLevelCost: "blue_level_cost",
+		blueTimeBonusCost: "blue_time_bonus_cost",
+		redTotalCost: "red_total_cost",
+		redCostMilestone: "red_cost_milestone",
+		redConstellationCost: "red_constellation_cost",
+		redRefinementCost: "red_refinement_cost",
+		redLevelCost: "red_level_cost",
+		redTimeBonusCost: "red_time_bonus_cost",
+	},
 };
 
 export const IndexNames = {
@@ -175,6 +199,9 @@ export const IndexNames = {
 		type: "idx_weapon_type",
 		rarity: "idx_weapon_rarity",
 		isActive: "idx_weapon_is_active",
+	},
+	CharacterLevelCost: {
+		characterIdLevel: "idx_character_level_cost_character_id_level",
 	},
 	StaffRole: {
 		isActive: "idx_staff_role_is_active",

@@ -301,6 +301,15 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		weaponType: WeaponType.CATALYST,
 	},
 	{
+		key: "linnae",
+		name: "Linnae",
+		iconUrl:
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877305/linnae_eblqjz.png",
+		rarity: 5,
+		element: CharacterElement.GEO,
+		weaponType: WeaponType.BOW,
+	},
+	{
 		key: "lyney",
 		name: "Lyney",
 		iconUrl:
