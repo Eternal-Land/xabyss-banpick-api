@@ -23,6 +23,8 @@ import { UserModule } from "@modules/user/user";
 import { SocketModule } from "@modules/socket";
 import { NotificationModule } from "@modules/notification";
 import { CronModule } from "@modules/cron";
+import { UserSessionCostModule } from "@modules/user/session-cost";
+import { CharacterLevelCostModule } from "@modules/admin/character-level-cost/character-level-cost.module";
 
 @Module({
 	imports: [
@@ -33,10 +35,10 @@ import { CronModule } from "@modules/cron";
 				mount: true,
 			},
 		}),
+		AuthModule,
 		PermissionModule,
 		CharacterModule,
 		StaffRoleModule,
-		AuthModule,
 		StaffModule,
 		FilesModule,
 		SelfModule,
@@ -45,6 +47,7 @@ import { CronModule } from "@modules/cron";
 		AdminUserModule,
 		CostMilestoneModule,
 		CharacterCostModule,
+		CharacterLevelCostModule,
 		AccountCharacterModule,
 		UserCharacterModule,
 		MatchModule,
@@ -54,6 +57,7 @@ import { CronModule } from "@modules/cron";
 		SocketModule,
 		NotificationModule,
 		CronModule,
+		UserSessionCostModule,
 	],
 	controllers: [],
 	providers: [

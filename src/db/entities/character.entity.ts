@@ -14,6 +14,7 @@ import {
 import { AccountEntity } from "./account.entity";
 import { CharacterCostEntity } from "./character-cost.entity";
 import { AccountCharacterEntity } from "./account-character.entity";
+import { CharacterLevelCostEntity } from "./character-level-cost.entity";
 
 @Entity(TableNames.Character)
 export class CharacterEntity {
@@ -79,4 +80,10 @@ export class CharacterEntity {
 		(accountCharacter) => accountCharacter.character,
 	)
 	accountCharacters: AccountCharacterEntity[];
+
+	@OneToMany(
+		() => CharacterLevelCostEntity,
+		(characterLevelCost) => characterLevelCost.character,
+	)
+	characterLevelCosts: CharacterLevelCostEntity[];
 }
