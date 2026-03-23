@@ -7,11 +7,13 @@ import {
 	JoinColumn,
 	ManyToOne,
 	OneToMany,
+	OneToOne,
 	PrimaryGeneratedColumn,
 } from "typeorm";
 import { AccountEntity } from "./account.entity";
 import { MatchSessionEntity } from "./match-session.entity";
 import { MatchStatus, MatchType } from "@utils/enums";
+import { MatchStateEntity } from "./match-state.entity";
 
 @Entity(TableNames.Match)
 export class MatchEntity {
@@ -57,4 +59,7 @@ export class MatchEntity {
 	@ManyToOne(() => AccountEntity, { createForeignKeyConstraints: false })
 	@JoinColumn({ name: ColumnNames.Match.bluePlayerId })
 	bluePlayer: AccountEntity;
+
+	@OneToOne(() => MatchStateEntity, (matchState) => matchState.match)
+	matchState: MatchStateEntity;
 }

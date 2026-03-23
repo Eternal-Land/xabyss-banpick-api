@@ -14,6 +14,7 @@ export class MatchStateResponse {
 	redBanChars: string[];
 	redSelectedChars: string[];
 	redSelectedWeapons: string[];
+	updatedAt: Date;
 
 	static fromEntity(entity: MatchStateEntity): MatchStateResponse {
 		return Builder(MatchStateResponse)
@@ -28,6 +29,7 @@ export class MatchStateResponse {
 			.redBanChars(entity.redBanChars)
 			.redSelectedChars(entity.redSelectedChars)
 			.redSelectedWeapons(entity.redSelectedWeapons)
+			.updatedAt(entity.updatedAt)
 			.build();
 	}
 }
