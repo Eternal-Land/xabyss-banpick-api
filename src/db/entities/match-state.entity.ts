@@ -1,7 +1,16 @@
 import { ColumnNames, TableNames } from "@db/db.constants";
-import { Column, Entity, Index, PrimaryGeneratedColumn } from "typeorm";
+import {
+	Column,
+	Entity,
+	Index,
+	JoinColumn,
+	OneToOne,
+	PrimaryGeneratedColumn,
+	UpdateDateColumn,
+} from "typeorm";
 import { IndexNames } from "@db/db.constants";
 import { PlayerSide } from "@utils/enums";
+import { MatchEntity } from "./match.entity";
 
 @Entity(TableNames.MatchState)
 @Index(IndexNames.MatchState.matchId, ["matchId"], { unique: true })
@@ -11,6 +20,12 @@ export class MatchStateEntity {
 
 	@Column({ name: ColumnNames.Match.id })
 	matchId: string;
+
+	@OneToOne(() => MatchEntity, (match) => match.matchState, {
+		createForeignKeyConstraints: false,
+	})
+	@JoinColumn({ name: ColumnNames.Match.id })
+	match: MatchEntity;
 
 	@Column({ name: ColumnNames.MatchState.host_joined, default: false })
 	hostJoined: boolean;
@@ -60,4 +75,7 @@ export class MatchStateEntity {
 		type: "simple-array",
 	})
 	redSelectedWeapons: string[];
+
+	@UpdateDateColumn({ name: ColumnNames.Global.updatedAt, type: "datetime" })
+	updatedAt: Date;
 }
