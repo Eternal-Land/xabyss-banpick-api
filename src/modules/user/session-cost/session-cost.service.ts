@@ -5,6 +5,7 @@ import {
 	CharacterCostRepository,
 	CharacterLevelCostRepository,
 	CostMilestoneRepository,
+	MatchStateRepository,
 	MatchSessionRepository,
 	SessionCostRepository,
 	WeaponCostRepository,
@@ -15,19 +16,73 @@ import { PlayerSide, WeaponCostUnit } from "@utils/enums";
 import { SessionCostRequest } from "./dto";
 import { LessThanOrEqual } from "typeorm";
 
-type SideCostBreakdown = {
-	constellationCost: number;
-	refinementCost: number;
-	levelCost: number;
-	timeBonusCost: number;
-	costMilestone: number;
-	totalCost: number;
-};
-
 @Injectable()
 export class UserSessionCostService {
+	private toNumber(value: unknown): number {
+		const numeric = Number(value);
+		return Number.isFinite(numeric) ? numeric : 0;
+	}
+
+	private normalizeSessionCost(sessionCost: SessionCostEntity) {
+		sessionCost.blueTotalCost = this.toNumber(sessionCost.blueTotalCost);
+		sessionCost.blueCostMilestone = this.toNumber(
+			sessionCost.blueCostMilestone,
+		);
+		sessionCost.blueConstellationCost = this.toNumber(
+			sessionCost.blueConstellationCost,
+		);
+		sessionCost.blueRefinementCost = this.toNumber(
+			sessionCost.blueRefinementCost,
+		);
+		sessionCost.blueLevelCost = this.toNumber(sessionCost.blueLevelCost);
+		sessionCost.blueTimeBonusCost = this.toNumber(
+			sessionCost.blueTimeBonusCost,
+		);
+		sessionCost.redTotalCost = this.toNumber(sessionCost.redTotalCost);
+		sessionCost.redCostMilestone = this.toNumber(sessionCost.redCostMilestone);
+		sessionCost.redConstellationCost = this.toNumber(
+			sessionCost.redConstellationCost,
+		);
+		sessionCost.redRefinementCost = this.toNumber(
+			sessionCost.redRefinementCost,
+		);
+		sessionCost.redLevelCost = this.toNumber(sessionCost.redLevelCost);
+		sessionCost.redTimeBonusCost = this.toNumber(sessionCost.redTimeBonusCost);
+	}
+
+	private async findOrCreateSessionCost(matchSessionId: number) {
+		let sessionCost = await this.sessionCostRepo.findOne({
+			where: { matchSessionId },
+			order: { id: "DESC" },
+		});
+
+		if (!sessionCost) {
+			sessionCost = await this.sessionCostRepo.save(
+				this.sessionCostRepo.create({
+					matchSessionId,
+					blueTotalCost: 0,
+					blueCostMilestone: 0,
+					blueConstellationCost: 0,
+					blueRefinementCost: 0,
+					blueLevelCost: 0,
+					blueTimeBonusCost: 0,
+					redTotalCost: 0,
+					redCostMilestone: 0,
+					redConstellationCost: 0,
+					redRefinementCost: 0,
+					redLevelCost: 0,
+					redTimeBonusCost: 0,
+				}),
+			);
+		}
+
+		this.normalizeSessionCost(sessionCost);
+		return sessionCost;
+	}
+
 	constructor(
 		private readonly matchSessionRepo: MatchSessionRepository,
+		private readonly matchStateRepo: MatchStateRepository,
 		private readonly banPickSlotRepo: BanPickSlotRepository,
 		private readonly characterCostRepo: CharacterCostRepository,
 		private readonly accountCharacterRepo: AccountCharacterRepository,
@@ -38,29 +93,54 @@ export class UserSessionCostService {
 		private readonly characterLevelCostRepo: CharacterLevelCostRepository,
 	) {}
 
+	async getCurrentSessionCost(matchId: string): Promise<SessionCostEntity> {
+		const sessions = await this.matchSessionRepo.find({
+			where: { matchId, isDeleted: false },
+			order: { id: "ASC" },
+		});
+
+		if (!sessions.length) {
+			throw new NotFoundException("Match session not found");
+		}
+
+		const matchState = await this.matchStateRepo.findOne({
+			where: { matchId },
+		});
+		const currentSession =
+			sessions.find((session) => session.id === matchState?.currentSession) ??
+			sessions[0];
+
+		return await this.findOrCreateSessionCost(currentSession.id);
+	}
+
 	async calculate(
 		matchSessionId: number,
 		dto: SessionCostRequest,
 	): Promise<SessionCostEntity> {
 		const matchSession = await this.matchSessionRepo.findOne({
-			where: { id: matchSessionId },
+			where: { id: matchSessionId, isDeleted: false },
 		});
 
 		if (!matchSession) {
 			throw new NotFoundException("Match session not found");
 		}
 
-		const sessionCost = await this.sessionCostRepo.findOne({
-			where: { matchSessionId },
-			order: { id: "DESC" },
-		});
+		const sessionCost = await this.findOrCreateSessionCost(matchSessionId);
 
 		const slots = await this.banPickSlotRepo.find({
 			where: { matchSessionId },
 			order: { turnIndex: "DESC" },
 		});
 
-		if (slots[0].turnIndex !== dto.currentTurn) {
+		const latestSlot = slots[0];
+		if (!latestSlot) {
+			throw new NotFoundException("Ban pick slot not found for this session");
+		}
+
+		if (
+			typeof dto.currentTurn === "number" &&
+			latestSlot.turnIndex !== dto.currentTurn
+		) {
 			throw new NotFoundException(
 				"Ban pick slot not found for the current turn",
 			);
@@ -75,12 +155,13 @@ export class UserSessionCostService {
 		});
 
 		if (characterCost && characterCost.cost > 0) {
+			const characterCostValue = this.toNumber(characterCost.cost);
 			if (dto.side === PlayerSide.BLUE) {
-				sessionCost.blueConstellationCost += characterCost.cost;
-				sessionCost.blueTotalCost += characterCost.cost;
+				sessionCost.blueConstellationCost += characterCostValue;
+				sessionCost.blueTotalCost += characterCostValue;
 			} else {
-				sessionCost.redConstellationCost += characterCost.cost;
-				sessionCost.redTotalCost += characterCost.cost;
+				sessionCost.redConstellationCost += characterCostValue;
+				sessionCost.redTotalCost += characterCostValue;
 			}
 		}
 
@@ -93,40 +174,58 @@ export class UserSessionCostService {
 		});
 
 		if (characterLevelCost && characterLevelCost.cost > 0) {
+			const characterLevelCostValue = this.toNumber(characterLevelCost.cost);
 			if (dto.side === PlayerSide.BLUE) {
-				sessionCost.blueLevelCost += characterLevelCost.cost;
-				sessionCost.blueTotalCost += characterLevelCost.cost;
+				sessionCost.blueLevelCost += characterLevelCostValue;
+				sessionCost.blueTotalCost += characterLevelCostValue;
 			} else {
-				sessionCost.redLevelCost += characterLevelCost.cost;
-				sessionCost.redTotalCost += characterLevelCost.cost;
+				sessionCost.redLevelCost += characterLevelCostValue;
+				sessionCost.redTotalCost += characterLevelCostValue;
 			}
 		}
 
 		// Weapon cost
-		const weaponCost = await this.weaponCostRepo.find({
-			where: {
-				id: dto.weaponId,
-				weaponRarity: dto.weaponRarity,
-				upgradeLevel: LessThanOrEqual(dto.weaponRefinement),
-			},
-		});
-
-		if (weaponCost.length > 0) {
-			weaponCost.forEach((cost) => {
-				if (dto.side === PlayerSide.BLUE) {
-					if (cost.unit === WeaponCostUnit.SECONDS) {
-						sessionCost.blueRefinementCost += cost.value;
-					} else {
-						sessionCost.blueTotalCost += cost.value;
-					}
-				} else {
-					if (cost.unit === WeaponCostUnit.SECONDS) {
-						sessionCost.redRefinementCost += cost.value;
-					} else {
-						sessionCost.redTotalCost += cost.value;
-					}
-				}
+		if (dto.weaponId && dto.weaponRefinement) {
+			const weapon = await this.weaponRepo.findOne({
+				where: {
+					id: dto.weaponId,
+					isActive: true,
+				},
+				select: {
+					rarity: true,
+				},
 			});
+
+			if (!weapon) {
+				throw new NotFoundException("Weapon not found");
+			}
+
+			const resolvedWeaponRarity = dto.weaponRarity ?? weapon.rarity;
+			const weaponCosts = await this.weaponCostRepo.find({
+				where: {
+					weaponRarity: resolvedWeaponRarity,
+					upgradeLevel: LessThanOrEqual(dto.weaponRefinement),
+				},
+			});
+
+			if (weaponCosts.length > 0) {
+				weaponCosts.forEach((cost) => {
+					const costValue = this.toNumber(cost.value);
+					if (dto.side === PlayerSide.BLUE) {
+						if (cost.unit === WeaponCostUnit.SECONDS) {
+							sessionCost.blueRefinementCost += costValue;
+						} else {
+							sessionCost.blueTotalCost += costValue;
+						}
+					} else {
+						if (cost.unit === WeaponCostUnit.SECONDS) {
+							sessionCost.redRefinementCost += costValue;
+						} else {
+							sessionCost.redTotalCost += costValue;
+						}
+					}
+				});
+			}
 		}
 
 		// Time bonus cost
@@ -144,17 +243,18 @@ export class UserSessionCostService {
 		});
 
 		if (costMilestones) {
+			const secPerCost = this.toNumber(costMilestones.secPerCost);
 			if (dto.side === PlayerSide.BLUE) {
 				sessionCost.blueCostMilestone = costMilestones.id;
 				sessionCost.blueTimeBonusCost =
-					currentTotalCost * costMilestones.secPerCost +
+					this.toNumber(currentTotalCost) * secPerCost +
 					sessionCost.blueConstellationCost +
 					sessionCost.blueRefinementCost +
 					sessionCost.blueLevelCost;
 			} else {
 				sessionCost.redCostMilestone = costMilestones.id;
 				sessionCost.redTimeBonusCost =
-					currentTotalCost * costMilestones.secPerCost +
+					this.toNumber(currentTotalCost) * secPerCost +
 					sessionCost.redConstellationCost +
 					sessionCost.redRefinementCost +
 					sessionCost.redLevelCost;

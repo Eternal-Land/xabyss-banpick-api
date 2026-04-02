@@ -17,6 +17,7 @@ export const TableNames = {
 	MatchState: "match_state",
 	BanPickSlot: "ban_pick_slot",
 	SessionCost: "session_cost",
+	SessionRecord: "session_record",
 };
 
 export const ColumnNames = {
@@ -121,6 +122,7 @@ export const ColumnNames = {
 	},
 	MatchSession: {
 		id: "match_session_id",
+		sessionIndex: "session_index",
 		redParticipantId: "red_participant_id",
 		blueParticipantId: "blue_participant_id",
 		currentTurn: "current_turn",
@@ -172,6 +174,20 @@ export const ColumnNames = {
 		redRefinementCost: "red_refinement_cost",
 		redLevelCost: "red_level_cost",
 		redTimeBonusCost: "red_time_bonus_cost",
+	},
+	SessionRecord: {
+		id: "session_record_id",
+		matchSessionId: "match_session_id",
+		blueChamber1: "blue_chamber_1",
+		blueChamber2: "blue_chamber_2",
+		blueChamber3: "blue_chamber_3",
+		blueResetTimes: "blue_reset_times",
+		blueFinalTime: "blue_final_time",
+		redChamber1: "red_chamber_1",
+		redChamber2: "red_chamber_2",
+		redChamber3: "red_chamber_3",
+		redResetTimes: "red_reset_times",
+		redFinalTime: "red_final_time",
 	},
 };
 
