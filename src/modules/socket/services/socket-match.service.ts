@@ -164,13 +164,11 @@ export class SocketMatchService {
 	@Transactional()
 	private async cancelEmptyMatch(match: MatchEntity) {
 		if (match.status != MatchStatus.LIVE) {
-			await this.matchRepository.delete(match.id);
-		} else {
-			await this.matchRepository.update(match.id, {
-				status: MatchStatus.CANCELLED,
-			});
-			await this.matchStateRepository.delete({ matchId: match.id });
+			await Promise.all([
+				this.matchRepository.delete(match.id),
+				this.matchStateRepository.delete({ matchId: match.id }),
+			]);
+			this.emitToMatch(match.id, SocketEvents.MATCH_DELETED, match.id);
 		}
-		this.emitToMatch(match.id, SocketEvents.MATCH_DELETED, match.id);
 	}
 }

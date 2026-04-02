@@ -22,6 +22,10 @@ import { WeaponCostModule } from "@modules/admin/weapon-cost";
 import { UserModule } from "@modules/user/user";
 import { SocketModule } from "@modules/socket";
 import { NotificationModule } from "@modules/notification";
+import { CronModule } from "@modules/cron";
+import { UserSessionCostModule } from "@modules/user/session-cost";
+import { CharacterLevelCostModule } from "@modules/admin/character-level-cost/character-level-cost.module";
+import { UserSessionRecordModule } from "@modules/user/session-record";
 
 @Module({
 	imports: [
@@ -32,10 +36,10 @@ import { NotificationModule } from "@modules/notification";
 				mount: true,
 			},
 		}),
+		AuthModule,
 		PermissionModule,
 		CharacterModule,
 		StaffRoleModule,
-		AuthModule,
 		StaffModule,
 		FilesModule,
 		SelfModule,
@@ -44,6 +48,7 @@ import { NotificationModule } from "@modules/notification";
 		AdminUserModule,
 		CostMilestoneModule,
 		CharacterCostModule,
+		CharacterLevelCostModule,
 		AccountCharacterModule,
 		UserCharacterModule,
 		MatchModule,
@@ -52,6 +57,9 @@ import { NotificationModule } from "@modules/notification";
 		UserModule,
 		SocketModule,
 		NotificationModule,
+		CronModule,
+		UserSessionCostModule,
+		UserSessionRecordModule,
 	],
 	controllers: [],
 	providers: [

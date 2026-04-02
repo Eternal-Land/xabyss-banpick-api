@@ -3,6 +3,7 @@ import { DbModule } from "@db/db.module";
 import {
 	CharacterCostMilestoneSeederService,
 	CharacterCostSeederService,
+	CharacterLevelCostSeederService,
 	CharacterSeederService,
 	SeederService,
 	WeaponCostSeederService,
@@ -16,6 +17,7 @@ const services = [
 	CharacterCostMilestoneSeederService,
 	WeaponCostSeederService,
 	CharacterCostSeederService,
+	CharacterLevelCostSeederService,
 ];
 
 @Module({

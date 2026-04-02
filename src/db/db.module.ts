@@ -18,7 +18,10 @@ import {
 	NotificationRepository,
 	MatchStateRepository,
 	BanPickSlotRepository,
+	SessionCostRepository,
+	SessionRecordRepository,
 } from "./repositories";
+import { CharacterLevelCostRepository } from "./repositories/character-level-cost.repository";
 
 const repositories = [
 	PermissionRepository,
@@ -36,6 +39,9 @@ const repositories = [
 	NotificationRepository,
 	MatchStateRepository,
 	BanPickSlotRepository,
+	SessionCostRepository,
+	SessionRecordRepository,
+	CharacterLevelCostRepository,
 ];
 
 @Global()
