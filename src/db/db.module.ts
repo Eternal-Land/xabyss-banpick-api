@@ -19,6 +19,7 @@ import {
 	MatchStateRepository,
 	BanPickSlotRepository,
 	SessionCostRepository,
+	SessionRecordRepository,
 } from "./repositories";
 import { CharacterLevelCostRepository } from "./repositories/character-level-cost.repository";
 
@@ -39,6 +40,7 @@ const repositories = [
 	MatchStateRepository,
 	BanPickSlotRepository,
 	SessionCostRepository,
+	SessionRecordRepository,
 	CharacterLevelCostRepository,
 ];
 

@@ -1,17 +1,22 @@
 import {
 	AccountCharacterRepository,
+	BanPickSlotRepository,
 	MatchRepository,
 	MatchSessionRepository,
 	MatchStateRepository,
 	WeaponRepository,
 } from "@db/repositories";
-import { MatchEntity, MatchStateEntity } from "@db/entities";
-import { Injectable } from "@nestjs/common";
+import {
+	MatchEntity,
+	MatchSessionEntity,
+	MatchStateEntity,
+} from "@db/entities";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { AccountCharacterNotFoundError } from "@modules/account-character/errors";
 import { WeaponNotFoundError } from "@modules/admin/weapon/errors";
 import { MatchStateResponse } from "@modules/user/match/dto";
 import { GenshinBanpickCls } from "@utils";
-import { MatchStatus, PlayerSide } from "@utils/enums";
+import { MatchSessionStatus, MatchStatus, PlayerSide } from "@utils/enums";
 import { ClsService } from "nestjs-cls";
 import { Transactional } from "typeorm-transactional";
 import { CreateMatchRequest, MatchQuery } from "./dto";
@@ -28,6 +33,7 @@ import {
 } from "./errors";
 import { SocketMatchService } from "@modules/socket/services";
 import { SocketEvents } from "@utils/constants";
+import { In, Not } from "typeorm";
 
 interface FindOneOptions {
 	isHost?: boolean;
@@ -42,6 +48,7 @@ export class MatchService {
 		private readonly socketMatchService: SocketMatchService,
 		private readonly matchStateRepo: MatchStateRepository,
 		private readonly matchSessionRepo: MatchSessionRepository,
+		private readonly banPickSlotRepo: BanPickSlotRepository,
 		private readonly accountCharacterRepo: AccountCharacterRepository,
 		private readonly weaponRepo: WeaponRepository,
 	) {}
@@ -72,9 +79,21 @@ export class MatchService {
 			where: { matchId },
 		});
 
+		const existedSessions = await this.matchSessionRepo.find({
+			where: { matchId, isDeleted: false },
+			select: { id: true },
+		});
+		const sessionIds = existedSessions.map((session) => session.id);
+
 		if (existed) {
 			await this.matchStateRepo.delete({ matchId });
 		}
+
+		if (sessionIds.length) {
+			await this.banPickSlotRepo.delete({ matchSessionId: In(sessionIds) });
+			await this.matchSessionRepo.delete({ matchId });
+		}
+
 		await this.matchStateRepo.insert({
 			matchId,
 			blueBanChars: [],
@@ -84,33 +103,171 @@ export class MatchService {
 			redSelectedChars: [],
 			redSelectedWeapons: [],
 		});
+
+		const match = await this.matchRepo.findOne({ where: { id: matchId } });
+		if (!match) {
+			throw new MatchNotFoundError();
+		}
+		const sessions = await this.ensureMatchSessions(match);
+		const firstSession = sessions[0];
+		if (firstSession) {
+			await this.matchStateRepo.update(
+				{ matchId },
+				{ currentSession: firstSession.id },
+			);
+		}
+	}
+
+	private async ensureMatchSessions(match: MatchEntity) {
+		const currentAccountId = this.cls.get("profile.id");
+
+		const sessions = await this.matchSessionRepo.find({
+			where: { matchId: match.id, isDeleted: false },
+			order: { id: "ASC" },
+		});
+
+		if (sessions.length >= match.sessionCount) {
+			return sessions;
+		}
+
+		const sessionsToCreate = Array.from({
+			length: match.sessionCount - sessions.length,
+		}).map((_, index) => ({
+			matchId: match.id,
+			createdBy: currentAccountId,
+			updatedBy: currentAccountId,
+			isDeleted: false,
+			totalCostBlue: 0,
+			totalCostRed: 0,
+			sessionStatus:
+				index === 0 && sessions.length === 0
+					? MatchSessionStatus.LIVE
+					: MatchSessionStatus.PENDING,
+		}));
+
+		await this.matchSessionRepo.save(
+			this.matchSessionRepo.create(sessionsToCreate),
+		);
+
+		return await this.matchSessionRepo.find({
+			where: { matchId: match.id, isDeleted: false },
+			order: { id: "ASC" },
+		});
+	}
+
+	private async getCurrentMatchSession(
+		match: MatchEntity,
+		matchState: MatchStateEntity,
+	): Promise<MatchSessionEntity> {
+		const sessions = await this.ensureMatchSessions(match);
+		const byId = sessions.find(
+			(session) => session.id === matchState.currentSession,
+		);
+		const currentSession = byId ?? sessions[0];
+		if (!currentSession) {
+			throw new MatchNotFoundError();
+		}
+
+		if (matchState.currentSession !== currentSession.id) {
+			matchState.currentSession = currentSession.id;
+			await this.matchStateRepo.save(matchState);
+		}
+
+		return currentSession;
+	}
+
+	private mapSlotsToMatchState(
+		matchState: MatchStateEntity,
+		slots: Array<{
+			slotType: string;
+			matchSide: string;
+			characterId: number;
+			weaponId: number | null;
+		}>,
+	) {
+		const blueBanChars: string[] = [];
+		const blueSelectedChars: string[] = [];
+		const blueSelectedWeapons: string[] = [];
+		const redBanChars: string[] = [];
+		const redSelectedChars: string[] = [];
+		const redSelectedWeapons: string[] = [];
+
+		slots.forEach((slot) => {
+			const characterId = String(slot.characterId);
+			const weaponId = slot.weaponId ? String(slot.weaponId) : "";
+
+			if (slot.slotType === "BAN") {
+				if (slot.matchSide === "BLUE") {
+					blueBanChars.push(characterId);
+				} else {
+					redBanChars.push(characterId);
+				}
+				return;
+			}
+
+			if (slot.matchSide === "BLUE") {
+				blueSelectedChars.push(characterId);
+				blueSelectedWeapons.push(weaponId);
+			} else {
+				redSelectedChars.push(characterId);
+				redSelectedWeapons.push(weaponId);
+			}
+		});
+
+		matchState.blueBanChars = blueBanChars;
+		matchState.blueSelectedChars = blueSelectedChars;
+		matchState.blueSelectedWeapons = blueSelectedWeapons;
+		matchState.redBanChars = redBanChars;
+		matchState.redSelectedChars = redSelectedChars;
+		matchState.redSelectedWeapons = redSelectedWeapons;
+	}
+
+	private async syncMatchStateWithCurrentSession(
+		match: MatchEntity,
+		matchState: MatchStateEntity,
+	) {
+		const currentSession = await this.getCurrentMatchSession(match, matchState);
+		const slots = await this.banPickSlotRepo.find({
+			where: {
+				matchSessionId: currentSession.id,
+				slotStatus: "LOCKED",
+			},
+			order: { turnIndex: "ASC" },
+			select: {
+				slotType: true,
+				matchSide: true,
+				characterId: true,
+				weaponId: true,
+			},
+		});
+
+		this.mapSlotsToMatchState(matchState, slots);
+		return await this.matchStateRepo.save(matchState);
 	}
 
 	async findMany(query: MatchQuery) {
-		const matchQb = this.matchRepo
-			.createQueryBuilder("match")
-			.innerJoinAndSelect("match.host", "host");
+		const statusFilter = { status: Not(MatchStatus.CANCELLED) };
+		const where = query.accountId
+			? [
+					{ ...statusFilter, hostId: query.accountId },
+					{ ...statusFilter, redPlayerId: query.accountId },
+					{ ...statusFilter, bluePlayerId: query.accountId },
+				]
+			: statusFilter;
 
-		if (query.accountId) {
-			matchQb
-				.innerJoinAndSelect("match.redPlayer", "redPlayer")
-				.innerJoinAndSelect("match.bluePlayer", "bluePlayer")
-				.andWhere(
-					"match.hostId = :accountId OR redPlayer.id = :accountId OR bluePlayer.id = :accountId",
-					{
-						accountId: query.accountId,
-					},
-				);
-		}
-
-		const [items, total] = await Promise.all([
-			matchQb
-				.orderBy("match.createdAt", "DESC")
-				.take(query.take)
-				.skip((query.page - 1) * query.take)
-				.getMany(),
-			matchQb.getCount(),
-		]);
+		const [items, total] = await this.matchRepo.findAndCount({
+			where,
+			relations: {
+				host: true,
+				redPlayer: true,
+				bluePlayer: true,
+			},
+			order: {
+				createdAt: "DESC",
+			},
+			take: query.take,
+			skip: (query.page - 1) * query.take,
+		});
 
 		return { items, total };
 	}
@@ -138,9 +295,18 @@ export class MatchService {
 	@Transactional()
 	async deleteOne(id: string) {
 		await this.findOne(id, { isHost: true, isNotStarted: true });
+		const sessions = await this.matchSessionRepo.find({
+			where: { matchId: id, isDeleted: false },
+			select: { id: true },
+		});
+		const sessionIds = sessions.map((session) => session.id);
 		await Promise.all([
 			this.matchRepo.delete(id),
 			this.matchStateRepo.delete({ matchId: id }),
+			sessionIds.length
+				? this.banPickSlotRepo.delete({ matchSessionId: In(sessionIds) })
+				: Promise.resolve(),
+			this.matchSessionRepo.delete({ matchId: id }),
 		]);
 		this.socketMatchService.emitToMatch(id, SocketEvents.MATCH_DELETED);
 	}
@@ -151,7 +317,8 @@ export class MatchService {
 		if ([MatchStatus.COMPLETED, MatchStatus.CANCELLED].includes(match.status)) {
 			throw new MatchAlreadyCompletedError();
 		}
-		return await this.matchStateRepo.findOneOrCreate(matchId);
+		const matchState = await this.matchStateRepo.findOneOrCreate(matchId);
+		return await this.syncMatchStateWithCurrentSession(match, matchState);
 	}
 
 	async startMatch(matchId: string) {
@@ -181,8 +348,9 @@ export class MatchService {
 
 		const matchState = await this.matchStateRepo.findOneOrCreate(matchId);
 		matchState.currentTurn = turn;
+		await this.matchStateRepo.save(matchState);
 
-		return await this.saveAndBroadcastMatchState(matchId, matchState);
+		return await this.saveAndBroadcastMatchState(matchId, match);
 	}
 
 	private getPlayerSide(match: MatchEntity, playerId: string) {
@@ -206,33 +374,77 @@ export class MatchService {
 		}
 	}
 
-	private ensureCharacterNotUsed(
-		matchState: MatchStateEntity,
-		characterName: string,
+	private async ensureCharacterNotUsedInSession(
+		matchSessionId: number,
+		characterId: number,
 	) {
-		const usedCharacters = new Set<string>([
-			...matchState.blueBanChars,
-			...matchState.blueSelectedChars,
-			...matchState.redBanChars,
-			...matchState.redSelectedChars,
-		]);
+		const existed = await this.banPickSlotRepo.exists({
+			where: {
+				matchSessionId,
+				characterId,
+				slotStatus: "LOCKED",
+			},
+		});
 
-		if (usedCharacters.has(characterName)) {
+		if (existed) {
 			throw new CharacterAlreadyUsedError();
 		}
 	}
 
 	private async saveAndBroadcastMatchState(
 		matchId: string,
-		matchState: MatchStateEntity,
+		match: MatchEntity,
 	) {
-		const savedMatchState = await this.matchStateRepo.save(matchState);
+		const matchState = await this.matchStateRepo.findOneOrCreate(matchId);
+		const savedMatchState = await this.syncMatchStateWithCurrentSession(
+			match,
+			matchState,
+		);
 		this.socketMatchService.emitToMatch(
 			matchId,
 			SocketEvents.UPDATE_MATCH_STATE,
 			MatchStateResponse.fromEntity(savedMatchState),
 		);
 		return savedMatchState;
+	}
+
+	private normalizePlayerSide(playerSide: PlayerSide) {
+		return playerSide === PlayerSide.BLUE ? "BLUE" : "RED";
+	}
+
+	private async createBanPickSlot(
+		matchSessionId: number,
+		playerSide: PlayerSide,
+		slotType: "BAN" | "PICK",
+		characterId: number,
+		selectedByAccountId: string,
+	) {
+		const normalizedSide = this.normalizePlayerSide(playerSide);
+		const [lastSlot, sideSlotsCount] = await Promise.all([
+			this.banPickSlotRepo.findOne({
+				where: { matchSessionId },
+				order: { turnIndex: "DESC" },
+				select: { turnIndex: true },
+			}),
+			this.banPickSlotRepo.count({
+				where: {
+					matchSessionId,
+					matchSide: normalizedSide,
+				},
+			}),
+		]);
+
+		await this.banPickSlotRepo.insert({
+			matchSessionId,
+			turnIndex: (lastSlot?.turnIndex ?? -1) + 1,
+			teamOrder: sideSlotsCount + 1,
+			slotType,
+			matchSide: normalizedSide,
+			slotStatus: "LOCKED",
+			characterId,
+			selectedByAccountId,
+			lockedAt: new Date(),
+		});
 	}
 
 	@Transactional()
@@ -243,6 +455,7 @@ export class MatchService {
 			throw new MatchAlreadyCompletedError();
 		}
 		const matchState = await this.matchStateRepo.findOneOrCreate(matchId);
+		const matchSession = await this.getCurrentMatchSession(match, matchState);
 		const playerSide = this.getPlayerSide(match, playerId);
 		if (playerSide === null) {
 			throw new MatchNotFoundError();
@@ -261,22 +474,16 @@ export class MatchService {
 			throw new AccountCharacterNotFoundError();
 		}
 
-		const selectedCharacterId = String(charId);
+		await this.ensureCharacterNotUsedInSession(matchSession.id, charId);
 
-		this.ensureCharacterNotUsed(matchState, selectedCharacterId);
-
-		if (playerSide === PlayerSide.BLUE) {
-			matchState.blueSelectedChars = [
-				...(matchState.blueSelectedChars || []),
-				selectedCharacterId,
-			];
-		} else {
-			matchState.redSelectedChars = [
-				...(matchState.redSelectedChars || []),
-				selectedCharacterId,
-			];
-		}
-		await this.saveAndBroadcastMatchState(matchId, matchState);
+		await this.createBanPickSlot(
+			matchSession.id,
+			playerSide,
+			"PICK",
+			charId,
+			playerId,
+		);
+		await this.saveAndBroadcastMatchState(matchId, match);
 	}
 
 	@Transactional()
@@ -287,6 +494,7 @@ export class MatchService {
 			throw new MatchAlreadyCompletedError();
 		}
 		const matchState = await this.matchStateRepo.findOneOrCreate(matchId);
+		const matchSession = await this.getCurrentMatchSession(match, matchState);
 		const playerSide = this.getPlayerSide(match, playerId);
 		if (playerSide === null) {
 			throw new MatchNotFoundError();
@@ -294,32 +502,32 @@ export class MatchService {
 
 		this.ensureCorrectTurn(matchState, playerSide);
 
-		const selectedCharacterId = String(charId);
+		await this.ensureCharacterNotUsedInSession(matchSession.id, charId);
 
-		this.ensureCharacterNotUsed(matchState, selectedCharacterId);
-
-		if (playerSide === PlayerSide.BLUE) {
-			matchState.blueBanChars = [
-				...(matchState.blueBanChars || []),
-				selectedCharacterId,
-			];
-		} else {
-			matchState.redBanChars = [
-				...(matchState.redBanChars || []),
-				selectedCharacterId,
-			];
-		}
-		await this.saveAndBroadcastMatchState(matchId, matchState);
+		await this.createBanPickSlot(
+			matchSession.id,
+			playerSide,
+			"BAN",
+			charId,
+			playerId,
+		);
+		await this.saveAndBroadcastMatchState(matchId, match);
 	}
 
 	@Transactional()
-	async pickWeapon(matchId: string, charId: number, weaponId: string) {
+	async pickWeapon(
+		matchId: string,
+		charId: number,
+		weaponId: string,
+		weaponRefinement: number,
+	) {
 		const playerId = this.cls.get("profile.id");
 		const match = await this.findOne(matchId);
 		if ([MatchStatus.COMPLETED, MatchStatus.CANCELLED].includes(match.status)) {
 			throw new MatchAlreadyCompletedError();
 		}
 		const matchState = await this.matchStateRepo.findOneOrCreate(matchId);
+		const matchSession = await this.getCurrentMatchSession(match, matchState);
 		const playerSide = this.getPlayerSide(match, playerId);
 		if (playerSide === null) {
 			throw new MatchNotFoundError();
@@ -328,6 +536,15 @@ export class MatchService {
 		const normalizedWeaponId = Number(weaponId);
 		if (!Number.isInteger(normalizedWeaponId) || normalizedWeaponId <= 0) {
 			throw new WeaponNotFoundError();
+		}
+
+		const normalizedWeaponRefinement = Number(weaponRefinement);
+		if (
+			!Number.isInteger(normalizedWeaponRefinement) ||
+			normalizedWeaponRefinement < 1 ||
+			normalizedWeaponRefinement > 5
+		) {
+			throw new BadRequestException("Invalid weapon refinement");
 		}
 
 		const weapon = await this.weaponRepo.findOne({
@@ -341,42 +558,41 @@ export class MatchService {
 			throw new WeaponNotFoundError();
 		}
 
-		const sideSelectedChars =
-			playerSide === PlayerSide.BLUE
-				? matchState.blueSelectedChars || []
-				: matchState.redSelectedChars || [];
-		const sideSelectedWeapons =
-			playerSide === PlayerSide.BLUE
-				? matchState.blueSelectedWeapons || []
-				: matchState.redSelectedWeapons || [];
+		const normalizedSide = this.normalizePlayerSide(playerSide);
+		const sidePickSlots = await this.banPickSlotRepo.find({
+			where: {
+				matchSessionId: matchSession.id,
+				matchSide: normalizedSide,
+				slotType: "PICK",
+				slotStatus: "LOCKED",
+			},
+			order: { teamOrder: "ASC" },
+		});
 
-		if (!sideSelectedChars.length) {
+		if (!sidePickSlots.length) {
 			throw new WeaponPickRequiresSelectedCharacterError();
 		}
 
-		const selectedCharKey = String(charId);
-		const selectedCharSlotIndex = sideSelectedChars.indexOf(selectedCharKey);
-		if (selectedCharSlotIndex < 0) {
+		const selectedPickSlot = sidePickSlots.find(
+			(slot) => slot.characterId === charId,
+		);
+		if (!selectedPickSlot) {
 			throw new AccountCharacterNotFoundError();
 		}
 
-		const weaponKey = String(normalizedWeaponId);
-		const duplicatedWeaponIndex = sideSelectedWeapons.indexOf(weaponKey);
-		if (
-			duplicatedWeaponIndex >= 0 &&
-			duplicatedWeaponIndex !== selectedCharSlotIndex
-		) {
+		const duplicatedSlot = sidePickSlots.find(
+			(slot) =>
+				slot.weaponId === normalizedWeaponId && slot.id !== selectedPickSlot.id,
+		);
+		if (duplicatedSlot) {
 			throw new WeaponAlreadySelectedForSideError();
 		}
 
-		const nextSideSelectedWeapons = [...sideSelectedWeapons];
-		nextSideSelectedWeapons[selectedCharSlotIndex] = weaponKey;
+		selectedPickSlot.weaponId = normalizedWeaponId;
+		selectedPickSlot.weaponRefinement = normalizedWeaponRefinement;
+		selectedPickSlot.weaponSelectedAt = new Date();
+		await this.banPickSlotRepo.save(selectedPickSlot);
 
-		if (playerSide === PlayerSide.BLUE) {
-			matchState.blueSelectedWeapons = nextSideSelectedWeapons;
-		} else {
-			matchState.redSelectedWeapons = nextSideSelectedWeapons;
-		}
-		await this.saveAndBroadcastMatchState(matchId, matchState);
+		await this.saveAndBroadcastMatchState(matchId, match);
 	}
 }

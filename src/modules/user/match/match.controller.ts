@@ -118,15 +118,16 @@ export class MatchController {
 		return BaseApiResponse.success();
 	}
 
-	@Put(":id/pick-weapon/:charId/:weaponId")
+	@Put(":id/pick-weapon/:charId/:weaponId/:weaponRefinement")
 	@SwaggerBaseApiMessageResponse()
 	@ApiBearerAuth()
 	async pickWeapon(
 		@Param("id", ParseUUIDPipe) id: string,
 		@Param("charId", ParseIntPipe) charId: number,
 		@Param("weaponId") weaponId: string,
+		@Param("weaponRefinement", ParseIntPipe) weaponRefinement: number,
 	) {
-		await this.matchService.pickWeapon(id, charId, weaponId);
+		await this.matchService.pickWeapon(id, charId, weaponId, weaponRefinement);
 		return BaseApiResponse.success();
 	}
 }

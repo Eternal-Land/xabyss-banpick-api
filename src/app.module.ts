@@ -25,6 +25,7 @@ import { NotificationModule } from "@modules/notification";
 import { CronModule } from "@modules/cron";
 import { UserSessionCostModule } from "@modules/user/session-cost";
 import { CharacterLevelCostModule } from "@modules/admin/character-level-cost/character-level-cost.module";
+import { UserSessionRecordModule } from "@modules/user/session-record";
 
 @Module({
 	imports: [
@@ -58,6 +59,7 @@ import { CharacterLevelCostModule } from "@modules/admin/character-level-cost/ch
 		NotificationModule,
 		CronModule,
 		UserSessionCostModule,
+		UserSessionRecordModule,
 	],
 	controllers: [],
 	providers: [

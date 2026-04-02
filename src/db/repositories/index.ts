@@ -15,3 +15,4 @@ export * from "./notification.repository";
 export * from "./match-state.repository";
 export * from "./ban-pick-slot.repository";
 export * from "./session-cost.repository";
+export * from "./session-record.repository";

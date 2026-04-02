@@ -15,3 +15,4 @@ export * from "./notification.entity";
 export * from "./match-state.entity";
 export * from "./ban-pick-slot.entity";
 export * from "./session-cost.entity";
+export * from "./session-record.entity";
