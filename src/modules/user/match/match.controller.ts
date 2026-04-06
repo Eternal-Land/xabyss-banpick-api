@@ -23,7 +23,6 @@ import {
 	MatchQuery,
 	MatchResponse,
 	MatchStateResponse,
-	UpdateMatchTurnRequest,
 } from "./dto";
 import { MatchService } from "./match.service";
 
@@ -85,15 +84,12 @@ export class MatchController {
 		return BaseApiResponse.success();
 	}
 
-	@Put(":id/turn")
-	@SwaggerBaseApiResponse(MatchStateResponse)
+	@Post(":id/complete-session")
+	@SwaggerBaseApiMessageResponse()
 	@ApiBearerAuth()
-	async updateTurn(
-		@Param("id", ParseUUIDPipe) id: string,
-		@Body() dto: UpdateMatchTurnRequest,
-	) {
-		const matchState = await this.matchService.updateTurn(id, dto.turn);
-		return BaseApiResponse.success(MatchStateResponse.fromEntity(matchState));
+	async completeSession(@Param("id", ParseUUIDPipe) id: string) {
+		await this.matchService.completeCurrentSession(id);
+		return BaseApiResponse.success();
 	}
 
 	@Put(":id/pick-char/:charId")

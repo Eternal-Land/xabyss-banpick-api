@@ -6,4 +6,6 @@ export const SocketEvents = {
 	MATCH_DELETED: "match_deleted",
 	UPDATE_MATCH_STATE: "update_match_state",
 	MATCH_STARTED: "match_started",
+	MATCH_COMPLETED: "match_completed",
+	MATCH_UPDATED: "match_updated",
 } as const;

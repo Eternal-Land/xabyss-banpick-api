@@ -1,8 +1,10 @@
 import {
 	MatchEntity,
 	MatchSessionEntity,
+	SessionCostEntity,
 	SessionRecordEntity,
 } from "@db/entities";
+import { SessionCostResponse } from "@modules/user/session-cost/dto/session-cost.response";
 import { ProfileResponse } from "@modules/self/dto";
 import { ApiProperty } from "@nestjs/swagger";
 import { Builder } from "builder-pattern";
@@ -108,6 +110,9 @@ class MatchSessionReportItemResponse {
 
 	@ApiProperty({ type: () => SessionRecordSummaryResponse, nullable: true })
 	record: SessionRecordSummaryResponse | null;
+
+	@ApiProperty({ type: () => SessionCostResponse, nullable: true })
+	cost: SessionCostResponse | null;
 }
 
 export class MatchReportDetailResponse {
@@ -137,6 +142,7 @@ export class MatchReportDetailResponse {
 
 	private static resolveWinner(
 		record?: SessionRecordEntity | null,
+		cost?: SessionCostEntity | null,
 	): PlayerSide | null {
 		if (!record) {
 			return null;
@@ -146,23 +152,29 @@ export class MatchReportDetailResponse {
 			return null;
 		}
 
-		if (record.blueFinalTime === record.redFinalTime) {
+		const blueTotalTime =
+			Number(record.blueFinalTime) +
+			(cost ? Number(cost.blueTimeBonusCost) : 0);
+		const redTotalTime =
+			Number(record.redFinalTime) + (cost ? Number(cost.redTimeBonusCost) : 0);
+
+		if (blueTotalTime === redTotalTime) {
 			return null;
 		}
 
-		return record.blueFinalTime < record.redFinalTime
-			? PlayerSide.BLUE
-			: PlayerSide.RED;
+		return blueTotalTime < redTotalTime ? PlayerSide.BLUE : PlayerSide.RED;
 	}
 
 	static fromEntity(
 		match: MatchEntity,
 		sessions: MatchSessionEntity[],
 		recordsBySessionId: Map<number, SessionRecordEntity>,
+		costsBySessionId: Map<number, SessionCostEntity>,
 	): MatchReportDetailResponse {
 		const mappedSessions = sessions.map((session) => {
 			const record = recordsBySessionId.get(session.id) ?? null;
-			const winnerSide = this.resolveWinner(record);
+			const cost = costsBySessionId.get(session.id) ?? null;
+			const winnerSide = this.resolveWinner(record, cost);
 			return Builder(MatchSessionReportItemResponse)
 				.matchSessionId(session.id)
 				.sessionIndex(session.sessionIndex)
@@ -184,6 +196,7 @@ export class MatchReportDetailResponse {
 				.blueFinalTime(record?.blueFinalTime ?? null)
 				.redFinalTime(record?.redFinalTime ?? null)
 				.record(record ? SessionRecordSummaryResponse.fromEntity(record) : null)
+				.cost(cost ? SessionCostResponse.fromEntity(cost) : null)
 				.build();
 		});
 

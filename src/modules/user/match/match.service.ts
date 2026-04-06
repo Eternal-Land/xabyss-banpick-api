@@ -4,6 +4,8 @@ import {
 	MatchRepository,
 	MatchSessionRepository,
 	MatchStateRepository,
+	SessionCostRepository,
+	SessionRecordRepository,
 	WeaponRepository,
 } from "@db/repositories";
 import {
@@ -28,12 +30,43 @@ import {
 	MatchParticipantMustBeUniqueError,
 	NotYourTurnError,
 	ParticipantNotFoundError,
+	SessionCompletionValidationError,
 	WeaponAlreadySelectedForSideError,
 	WeaponPickRequiresSelectedCharacterError,
 } from "./errors";
 import { SocketMatchService } from "@modules/socket/services";
 import { SocketEvents } from "@utils/constants";
 import { In, Not } from "typeorm";
+
+interface DraftAction {
+	side: PlayerSide;
+	type: "ban" | "pick";
+}
+
+const DRAFT_SEQUENCE: DraftAction[] = [
+	{ side: PlayerSide.BLUE, type: "ban" },
+	{ side: PlayerSide.RED, type: "ban" },
+	{ side: PlayerSide.BLUE, type: "ban" },
+	{ side: PlayerSide.RED, type: "ban" },
+	{ side: PlayerSide.BLUE, type: "pick" },
+	{ side: PlayerSide.RED, type: "pick" },
+	{ side: PlayerSide.RED, type: "pick" },
+	{ side: PlayerSide.BLUE, type: "pick" },
+	{ side: PlayerSide.BLUE, type: "pick" },
+	{ side: PlayerSide.RED, type: "pick" },
+	{ side: PlayerSide.RED, type: "pick" },
+	{ side: PlayerSide.BLUE, type: "pick" },
+	{ side: PlayerSide.RED, type: "ban" },
+	{ side: PlayerSide.BLUE, type: "ban" },
+	{ side: PlayerSide.RED, type: "pick" },
+	{ side: PlayerSide.BLUE, type: "pick" },
+	{ side: PlayerSide.BLUE, type: "pick" },
+	{ side: PlayerSide.RED, type: "pick" },
+	{ side: PlayerSide.RED, type: "pick" },
+	{ side: PlayerSide.BLUE, type: "pick" },
+	{ side: PlayerSide.BLUE, type: "pick" },
+	{ side: PlayerSide.RED, type: "pick" },
+];
 
 interface FindOneOptions {
 	isHost?: boolean;
@@ -51,6 +84,8 @@ export class MatchService {
 		private readonly banPickSlotRepo: BanPickSlotRepository,
 		private readonly accountCharacterRepo: AccountCharacterRepository,
 		private readonly weaponRepo: WeaponRepository,
+		private readonly sessionRecordRepo: SessionRecordRepository,
+		private readonly sessionCostRepo: SessionCostRepository,
 	) {}
 
 	@Transactional()
@@ -132,18 +167,26 @@ export class MatchService {
 
 		const sessionsToCreate = Array.from({
 			length: match.sessionCount - sessions.length,
-		}).map((_, index) => ({
-			matchId: match.id,
-			createdBy: currentAccountId,
-			updatedBy: currentAccountId,
-			isDeleted: false,
-			totalCostBlue: 0,
-			totalCostRed: 0,
-			sessionStatus:
-				index === 0 && sessions.length === 0
-					? MatchSessionStatus.LIVE
-					: MatchSessionStatus.PENDING,
-		}));
+		}).map((_, index) => {
+			const absoluteIndex = sessions.length + index;
+			return {
+				matchId: match.id,
+				sessionIndex: absoluteIndex + 1,
+				blueParticipantId:
+					absoluteIndex % 2 === 0 ? match.bluePlayerId : match.redPlayerId,
+				redParticipantId:
+					absoluteIndex % 2 === 0 ? match.redPlayerId : match.bluePlayerId,
+				createdBy: currentAccountId,
+				updatedBy: currentAccountId,
+				isDeleted: false,
+				totalCostBlue: 0,
+				totalCostRed: 0,
+				sessionStatus:
+					absoluteIndex === 0
+						? MatchSessionStatus.LIVE
+						: MatchSessionStatus.PENDING,
+			};
+		});
 
 		await this.matchSessionRepo.save(
 			this.matchSessionRepo.create(sessionsToCreate),
@@ -242,6 +285,20 @@ export class MatchService {
 		});
 
 		this.mapSlotsToMatchState(matchState, slots);
+
+		const draftStep = Math.min(
+			matchState.blueBanChars.length +
+				matchState.blueSelectedChars.length +
+				matchState.redBanChars.length +
+				matchState.redSelectedChars.length,
+			DRAFT_SEQUENCE.length,
+		);
+
+		const nextAction = DRAFT_SEQUENCE[draftStep];
+		if (nextAction && matchState.currentTurn !== nextAction.side) {
+			matchState.currentTurn = nextAction.side;
+		}
+
 		return await this.matchStateRepo.save(matchState);
 	}
 
@@ -327,32 +384,6 @@ export class MatchService {
 		this.socketMatchService.emitToMatch(matchId, SocketEvents.MATCH_STARTED);
 	}
 
-	@Transactional()
-	async updateTurn(matchId: string, turn: PlayerSide) {
-		const accountId = this.cls.get("profile.id");
-		const match = await this.findOne(matchId);
-
-		if ([MatchStatus.COMPLETED, MatchStatus.CANCELLED].includes(match.status)) {
-			throw new MatchAlreadyCompletedError();
-		}
-
-		const isParticipant = [
-			match.hostId,
-			match.bluePlayerId,
-			match.redPlayerId,
-		].includes(accountId);
-
-		if (!isParticipant) {
-			throw new ParticipantNotFoundError();
-		}
-
-		const matchState = await this.matchStateRepo.findOneOrCreate(matchId);
-		matchState.currentTurn = turn;
-		await this.matchStateRepo.save(matchState);
-
-		return await this.saveAndBroadcastMatchState(matchId, match);
-	}
-
 	private getPlayerSide(match: MatchEntity, playerId: string) {
 		if (playerId === match.bluePlayerId) {
 			return PlayerSide.BLUE;
@@ -388,6 +419,149 @@ export class MatchService {
 
 		if (existed) {
 			throw new CharacterAlreadyUsedError();
+		}
+	}
+
+	private validateSlotAgainstExpectedDraftAction(
+		slot: {
+			turnIndex: number;
+			slotType: string;
+			matchSide: string;
+			characterId: number;
+			weaponId: number | null;
+			weaponRefinement: number | null;
+		},
+		expectedAction: DraftAction,
+		expectedTurnIndex: number,
+	) {
+		const expectedSlotType = expectedAction.type === "ban" ? "BAN" : "PICK";
+		const expectedMatchSide =
+			expectedAction.side === PlayerSide.BLUE ? "BLUE" : "RED";
+
+		if (slot.turnIndex !== expectedTurnIndex) {
+			throw new SessionCompletionValidationError(
+				`Draft turn index mismatch at step ${expectedTurnIndex + 1}`,
+			);
+		}
+
+		if (
+			slot.slotType !== expectedSlotType ||
+			slot.matchSide !== expectedMatchSide
+		) {
+			throw new SessionCompletionValidationError(
+				`Draft action mismatch at step ${expectedTurnIndex + 1}`,
+			);
+		}
+
+		if (!Number.isInteger(slot.characterId) || slot.characterId <= 0) {
+			throw new SessionCompletionValidationError(
+				`Missing character selection at step ${expectedTurnIndex + 1}`,
+			);
+		}
+
+		if (expectedSlotType !== "PICK") {
+			return;
+		}
+
+		if (!Number.isInteger(slot.weaponId) || Number(slot.weaponId) <= 0) {
+			throw new SessionCompletionValidationError(
+				`Missing weapon selection for pick step ${expectedTurnIndex + 1}`,
+			);
+		}
+
+		const normalizedRefinement = Number(slot.weaponRefinement);
+		if (
+			!Number.isInteger(normalizedRefinement) ||
+			normalizedRefinement < 1 ||
+			normalizedRefinement > 5
+		) {
+			throw new SessionCompletionValidationError(
+				`Invalid weapon refinement for pick step ${expectedTurnIndex + 1}`,
+			);
+		}
+	}
+
+	private async ensureSessionDataCompleted(matchSessionId: number) {
+		const lockedSlots = await this.banPickSlotRepo.find({
+			where: {
+				matchSessionId,
+				slotStatus: "LOCKED",
+			},
+			order: { turnIndex: "ASC" },
+			select: {
+				turnIndex: true,
+				slotType: true,
+				matchSide: true,
+				characterId: true,
+				weaponId: true,
+				weaponRefinement: true,
+			},
+		});
+
+		if (lockedSlots.length !== DRAFT_SEQUENCE.length) {
+			throw new SessionCompletionValidationError(
+				"Cannot complete session before ban/pick draft is fully completed",
+			);
+		}
+
+		lockedSlots.forEach((slot, index) => {
+			const expectedAction = DRAFT_SEQUENCE[index];
+			if (!expectedAction) {
+				throw new SessionCompletionValidationError(
+					"Draft contains unexpected extra action",
+				);
+			}
+
+			this.validateSlotAgainstExpectedDraftAction(slot, expectedAction, index);
+		});
+
+		const sessionRecord = await this.sessionRecordRepo.findOne({
+			where: {
+				matchSessionId,
+				isDeleted: false,
+			},
+			select: {
+				blueChamber1: true,
+				blueChamber2: true,
+				blueChamber3: true,
+				blueFinalTime: true,
+				redChamber1: true,
+				redChamber2: true,
+				redChamber3: true,
+				redFinalTime: true,
+			},
+		});
+
+		if (!sessionRecord) {
+			throw new SessionCompletionValidationError(
+				"Cannot complete session before timer record is saved",
+			);
+		}
+
+		if (sessionRecord.blueFinalTime <= 0 || sessionRecord.redFinalTime <= 0) {
+			throw new SessionCompletionValidationError(
+				"Both Blue and Red final time must be greater than 0",
+			);
+		}
+
+		const expectedBlueFinalTime =
+			sessionRecord.blueChamber1 +
+			sessionRecord.blueChamber2 +
+			sessionRecord.blueChamber3;
+		if (sessionRecord.blueFinalTime !== expectedBlueFinalTime) {
+			throw new SessionCompletionValidationError(
+				"Blue final time must equal the sum of chamber times",
+			);
+		}
+
+		const expectedRedFinalTime =
+			sessionRecord.redChamber1 +
+			sessionRecord.redChamber2 +
+			sessionRecord.redChamber3;
+		if (sessionRecord.redFinalTime !== expectedRedFinalTime) {
+			throw new SessionCompletionValidationError(
+				"Red final time must equal the sum of chamber times",
+			);
 		}
 	}
 
@@ -594,5 +768,125 @@ export class MatchService {
 		await this.banPickSlotRepo.save(selectedPickSlot);
 
 		await this.saveAndBroadcastMatchState(matchId, match);
+	}
+
+	@Transactional()
+	async completeCurrentSession(matchId: string) {
+		const hostId = this.cls.get("profile.id");
+		const match = await this.findOne(matchId, { isHost: true });
+		if ([MatchStatus.COMPLETED, MatchStatus.CANCELLED].includes(match.status)) {
+			throw new MatchAlreadyCompletedError();
+		}
+
+		const matchState = await this.matchStateRepo.findOneOrCreate(matchId);
+		const currentSession = await this.getCurrentMatchSession(match, matchState);
+
+		await this.ensureSessionDataCompleted(currentSession.id);
+
+		// Mark current session completed
+		currentSession.sessionStatus = MatchSessionStatus.COMPLETED;
+		await this.matchSessionRepo.save(currentSession);
+
+		// Fetch all sessions and records to determine wins
+		const sessions = await this.matchSessionRepo.find({
+			where: { matchId },
+			order: { sessionIndex: "ASC", id: "ASC" },
+		});
+
+		const sessionIds = sessions.map((s) => s.id);
+		const records = sessionIds.length
+			? await this.sessionRecordRepo.find({
+					where: { matchSessionId: In(sessionIds), isDeleted: false },
+				})
+			: [];
+		const costs = sessionIds.length
+			? await this.sessionCostRepo.find({
+					where: { matchSessionId: In(sessionIds) },
+				})
+			: [];
+
+		let blueWins = 0;
+		let redWins = 0;
+
+		const completedSessions = sessions.filter(
+			(s) => s.sessionStatus === MatchSessionStatus.COMPLETED,
+		);
+
+		for (const session of completedSessions) {
+			const record = records.find((r) => r.matchSessionId === session.id);
+			const cost = costs.find((c) => c.matchSessionId === session.id);
+
+			const blueFinalTime = record ? Number(record.blueFinalTime) : 0;
+			const blueTimeBonus = cost ? Number(cost.blueTimeBonusCost) : 0;
+			// 0 penalty per reset
+			const blueTotalTime = blueFinalTime + blueTimeBonus;
+
+			const redFinalTime = record ? Number(record.redFinalTime) : 0;
+			const redTimeBonus = cost ? Number(cost.redTimeBonusCost) : 0;
+			const redTotalTime = redFinalTime + redTimeBonus;
+
+			if (blueTotalTime < redTotalTime) {
+				// Blue participant of THIS session won
+				// Note: The UI shows match.bluePlayer as the overall Blue player.
+				// In odd sessions, blueParticipant == bluePlayer. In even, redParticipant == bluePlayer.
+				if (session.blueParticipantId === match.bluePlayerId) {
+					blueWins++;
+				} else {
+					redWins++;
+				}
+			} else if (redTotalTime < blueTotalTime) {
+				if (session.redParticipantId === match.redPlayerId) {
+					redWins++;
+				} else {
+					blueWins++;
+				}
+			}
+		}
+
+		const winsRequired = Math.ceil(match.sessionCount / 2);
+
+		if (
+			blueWins >= winsRequired ||
+			redWins >= winsRequired ||
+			completedSessions.length >= match.sessionCount
+		) {
+			await this.matchRepo.update(matchId, { status: MatchStatus.COMPLETED });
+		} else {
+			// Find next pending session
+			const nextSession = sessions.find(
+				(s) => s.sessionStatus === MatchSessionStatus.PENDING,
+			);
+			if (nextSession) {
+				nextSession.sessionStatus = MatchSessionStatus.LIVE;
+				await this.matchSessionRepo.save(nextSession);
+
+				// Re-assign matchState to new session, empty out slots
+				await this.matchStateRepo.update(
+					{ matchId },
+					{
+						currentSession: nextSession.id,
+						currentTurn: PlayerSide.BLUE,
+						blueBanChars: [],
+						blueSelectedChars: [],
+						blueSelectedWeapons: [],
+						redBanChars: [],
+						redSelectedChars: [],
+						redSelectedWeapons: [],
+					},
+				);
+
+				// Swap blue and red player for side "Đổi bên" UI effect
+				await this.matchRepo.update(matchId, {
+					bluePlayerId: match.redPlayerId,
+					redPlayerId: match.bluePlayerId,
+				});
+			}
+		}
+
+		const updatedMatch = await this.findOne(matchId);
+		await this.saveAndBroadcastMatchState(matchId, updatedMatch);
+		this.socketMatchService.emitToMatch(matchId, SocketEvents.MATCH_UPDATED, {
+			...updatedMatch,
+		});
 	}
 }

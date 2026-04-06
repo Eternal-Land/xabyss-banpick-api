@@ -46,6 +46,7 @@ export class UserSessionRecordController {
 				report.match,
 				report.sessions,
 				report.recordsBySessionId,
+				report.costsBySessionId,
 			),
 		);
 	}

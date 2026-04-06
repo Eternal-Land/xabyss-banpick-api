@@ -1,6 +1,7 @@
 import {
 	MatchRepository,
 	MatchSessionRepository,
+	SessionCostRepository,
 	SessionRecordRepository,
 } from "@db/repositories";
 import { Injectable, NotFoundException } from "@nestjs/common";
@@ -15,6 +16,7 @@ export class UserSessionRecordService {
 		private readonly matchRepo: MatchRepository,
 		private readonly matchSessionRepo: MatchSessionRepository,
 		private readonly sessionRecordRepo: SessionRecordRepository,
+		private readonly sessionCostRepo: SessionCostRepository,
 		private readonly cls: ClsService<GenshinBanpickCls>,
 	) {}
 
@@ -101,10 +103,21 @@ export class UserSessionRecordService {
 			records.map((record) => [record.matchSessionId, record] as const),
 		);
 
+		const costs = sessionIds.length
+			? await this.sessionCostRepo.find({
+					where: { matchSessionId: In(sessionIds) },
+				})
+			: [];
+
+		const costsBySessionId = new Map(
+			costs.map((cost) => [cost.matchSessionId, cost] as const),
+		);
+
 		return {
 			match,
 			sessions,
 			recordsBySessionId,
+			costsBySessionId,
 		};
 	}
 }

@@ -1,351 +1,102 @@
-# Genshin Banpick API - Copilot Instructions
+# genshin-banpick-api
 
-## Project Overview
-
-This is a **NestJS** API backend for a Genshin Impact ban/pick management system. It uses **TypeORM** with MySQL, **nestjs-cls** for request context, and follows a modular architecture.
+A NestJS REST API backend for a Genshin Impact ban/pick management system. It handles match sessions with ban/pick mechanics, character and weapon management, user authentication with JWT, role-based access control, real-time communication via WebSockets (Socket.IO), HoYoLAB integration, file uploads via Cloudinary, and scheduled background jobs.
 
 ## Tech Stack
 
-- **Framework**: NestJS 11+
-- **Language**: TypeScript 5.x
-- **Database**: MySQL with TypeORM 0.3.x
-- **Authentication**: JWT with bcryptjs
-- **Validation**: class-validator + class-transformer
-- **API Documentation**: Swagger (@nestjs/swagger)
-- **Transaction Management**: typeorm-transactional
-- **File Storage**: Cloudinary
-- **Context Management**: nestjs-cls
+- TypeScript
+
+## Frameworks and Libraries
+
+- NestJS 11
+- TypeORM 0.3
+- MySQL (mysql2)
+- typeorm-transactional
+- nestjs-cls
+- Socket.IO (@nestjs/websockets, @nestjs/platform-socket.io)
+- @nestjs/schedule (Cron Jobs)
+- JWT (jsonwebtoken)
+- bcryptjs
+- class-validator
+- class-transformer
+- @nestjs/swagger (Swagger/OpenAPI)
+- Cloudinary
+- helmet
+- cookie-parser
+- dayjs
+- builder-pattern
+- dotenv
+- @faker-js/faker (dev)
+- Jest (testing)
+- ESLint + Prettier
+- Husky + lint-staged
+- Commitlint
 
 ## Project Structure
 
-```
-src/
-├── main.ts              # Application entry point
-├── app.module.ts        # Root module
-├── db/                  # Database layer
-│   ├── entities/        # TypeORM entities
-│   ├── repositories/    # Custom repositories
-│   ├── migrations/      # Database migrations
-│   ├── seeder/          # Data seeding
-│   ├── db.module.ts     # Database module
-│   └── db.constants.ts  # Table/column/index naming constants
-├── errors/              # Global error classes
-├── modules/             # Feature modules
-│   ├── admin/           # Admin-specific modules
-│   ├── auth/            # Authentication module
-│   ├── files/           # File upload module
-│   ├── hoyolab/         # HoYoLAB integration
-│   ├── self/            # Current user profile
-│   └── user/            # User-facing modules
-├── providers/           # External service providers
-└── utils/               # Shared utilities
-    ├── decorators/      # Custom decorators
-    ├── dto/             # Shared DTOs
-    ├── enums/           # Enumerations
-    ├── types/           # TypeScript types
-    └── constants/       # App constants
-```
-
-## Path Aliases
-
-Use these path aliases defined in `tsconfig.json`:
-
-```typescript
-import { ... } from "@utils";        // src/utils
-import { ... } from "@utils/*";      // src/utils/*
-import { ... } from "@errors";       // src/errors
-import { ... } from "@db";           // src/db
-import { ... } from "@db/*";         // src/db/*
-import { ... } from "@modules/*";    // src/modules/*
-import { ... } from "@providers/*";  // src/providers/*
-```
-
-## Coding Conventions
-
-### Entity Definitions
-
-- Use `db.constants.ts` for all table, column, and index names
-- Always include `createdAt`, `updatedAt`, `createdById`, `updatedById`, `isActive` for trackable entities
-- Use explicit column names via `ColumnNames`
-- Set `createForeignKeyConstraints: false` on relations to avoid constraint issues
-
-```typescript
-import { ColumnNames, IndexNames, TableNames } from "@db/db.constants";
-
-@Entity(TableNames.Character)
-export class CharacterEntity {
-	@PrimaryGeneratedColumn("increment", { name: ColumnNames.Character.id })
-	id: number;
-
-	@Column({ name: ColumnNames.Character.name })
-	name: string;
-
-	@Index(IndexNames.Character.isActive)
-	@Column({ name: ColumnNames.Global.isActive, default: true })
-	isActive: boolean;
-
-	@ManyToOne(() => AccountEntity, { createForeignKeyConstraints: false })
-	@JoinColumn({ name: ColumnNames.Global.createdById })
-	createdBy: AccountEntity;
-}
-```
-
-### Repository Pattern
-
-- Extend TypeORM's `Repository` class
-- Inject `DataSource` in constructor
-- Register in `db.module.ts`
-
-```typescript
-@Injectable()
-export class CharacterRepository extends Repository<CharacterEntity> {
-	constructor(datasource: DataSource) {
-		super(CharacterEntity, datasource.createEntityManager());
-	}
-}
-```
-
-### Module Structure
-
-Each feature module follows this structure:
-
-```
-module-name/
-├── module-name.controller.ts  # HTTP endpoints
-├── module-name.service.ts     # Business logic
-├── module-name.module.ts      # Module definition
-├── index.ts                   # Barrel exports
-├── dto/                       # Request/Response DTOs
-│   ├── create-*.request.ts
-│   ├── update-*.request.ts
-│   ├── *.query.ts
-│   ├── *.response.ts
-│   └── index.ts
-└── errors/                    # Module-specific errors
-    ├── *.error.ts
-    └── index.ts
-```
-
-### DTO Patterns
-
-**Request DTOs** - Use class-validator decorators:
-
-```typescript
-export class CreateCharacterRequest {
-	@ApiProperty()
-	@IsString()
-	@IsNotEmpty()
-	key: string;
-
-	@ApiProperty({ enum: CharacterElement })
-	@IsEnum(CharacterElement)
-	element: CharacterElement;
-}
-```
-
-**Response DTOs** - Use Builder pattern with `fromEntity` static method:
-
-```typescript
-export class CharacterResponse {
-	@ApiProperty()
-	id: number;
-
-	@ApiProperty()
-	name: string;
-
-	static fromEntity(entity: CharacterEntity) {
-		return Builder(CharacterResponse).id(entity.id).name(entity.name).build();
-	}
-
-	static fromEntities(entities: CharacterEntity[]) {
-		return entities.map((entity) => this.fromEntity(entity));
-	}
-}
-```
-
-**Query DTOs** - Extend `PaginationQuery` for list endpoints:
-
-```typescript
-export class CharacterQuery extends PaginationQuery {
-	@ApiProperty({ required: false })
-	search?: string;
-
-	@ApiProperty({ required: false, enum: CharacterElement, isArray: true })
-	@IsEnum(CharacterElement, { each: true })
-	@IsOptional()
-	@TransformToNumberArray()
-	element?: CharacterElement[];
-}
-```
-
-### Controller Patterns
-
-```typescript
-@Controller("/admin/characters")
-@ApiBearerAuth()
-export class CharacterController {
-	constructor(private readonly characterService: CharacterService) {}
-
-	@Get()
-	@RequirePermission("admin.character.list")
-	@SwaggerBaseApiResponse(CharacterResponse, { isArray: true })
-	async listCharacters(@Query() query: CharacterQuery) {
-		const { characters, total } =
-			await this.characterService.listCharacters(query);
-		return BaseApiResponse.successWithPagination(
-			CharacterResponse.fromEntities(characters),
-			PaginationDto.from(query.page, query.take, total),
-		);
-	}
-
-	@Get(":id")
-	@RequirePermission("admin.character.detail")
-	@SwaggerBaseApiResponse(CharacterResponse)
-	async getCharacter(@Param("id", ParseIntPipe) id: number) {
-		const character = await this.characterService.getCharacter(id);
-		return BaseApiResponse.success(CharacterResponse.fromEntity(character));
-	}
-}
-```
-
-### Service Patterns
-
-- Use `@Transactional()` for write operations
-- Access current user via `ClsService<GenshinBanpickCls>`
-- Throw custom `ApiError` subclasses for errors
-
-```typescript
-@Injectable()
-export class CharacterService {
-	constructor(
-		private readonly characterRepo: CharacterRepository,
-		private readonly cls: ClsService<GenshinBanpickCls>,
-	) {}
-
-	@Transactional()
-	async createCharacter(dto: CreateCharacterRequest) {
-		const currentAccountId = this.cls.get("profile.id");
-
-		const character = this.characterRepo.create({
-			...dto,
-			createdById: currentAccountId,
-		});
-
-		return this.characterRepo.save(character);
-	}
-}
-```
-
-### Error Handling
-
-Create module-specific errors extending `ApiError`:
-
-```typescript
-import { ApiError } from "@errors";
-import { ErrorCode } from "@utils/enums";
-
-export class CharacterNotFoundError extends ApiError {
-	constructor() {
-		super({
-			code: ErrorCode.CHARACTER_NOT_FOUND,
-			message: "Character not found",
-			status: 404,
-		});
-	}
-}
-```
-
-When adding new errors:
-
-1. Add error code to `src/utils/enums/error-code.ts`
-2. Create error class in module's `errors/` folder
-3. Export from `errors/index.ts`
-
-### Authentication & Authorization
-
-- All endpoints require authentication by default
-- Use `@SkipAuth()` to make an endpoint public
-- Use `@RequirePermission("permission.code")` for role-based access
-- Admin users bypass permission checks
-
-```typescript
-@Post("/public-endpoint")
-@SkipAuth()
-async publicEndpoint() { ... }
-
-@Post("/admin-only")
-@RequirePermission("admin.character.create")
-async adminOnlyEndpoint() { ... }
-```
-
-### API Response Format
-
-Always use `BaseApiResponse` wrapper:
-
-```typescript
-// Success
-return BaseApiResponse.success(data);
-
-// Success with pagination
-return BaseApiResponse.successWithPagination(
-	data,
-	PaginationDto.from(page, take, total),
-);
-
-// Success with cursor
-return BaseApiResponse.successWithCursor(data, nextCursor);
-```
-
-### Environment Variables
-
-Access via the `Env` object from `@utils/env`:
-
-```typescript
-import { Env } from "@utils";
-
-const port = Env.LISTEN_PORT;
-const secret = Env.JWT_AT_SECRET;
-```
-
-When adding new env variables:
-
-1. Add to `.env` file
-2. Add to `src/utils/env.ts` with proper type coercion
-
-## Database Commands
-
-```bash
-# Generate migration
-bun run migration:generate
-
-# Run migrations
-bun run migration:run
-
-# Seed database
-bun run seed
-```
-
-## Naming Conventions
-
-| Type         | Convention                     | Example                          |
-| ------------ | ------------------------------ | -------------------------------- |
-| Entity       | PascalCase + Entity suffix     | `CharacterEntity`                |
-| Repository   | PascalCase + Repository suffix | `CharacterRepository`            |
-| Controller   | PascalCase + Controller suffix | `CharacterController`            |
-| Service      | PascalCase + Service suffix    | `CharacterService`               |
-| Module       | PascalCase + Module suffix     | `CharacterModule`                |
-| Error        | PascalCase + Error suffix      | `CharacterNotFoundError`         |
-| Request DTO  | PascalCase + Request suffix    | `CreateCharacterRequest`         |
-| Response DTO | PascalCase + Response suffix   | `CharacterResponse`              |
-| Query DTO    | PascalCase + Query suffix      | `CharacterQuery`                 |
-| Table names  | snake_case                     | `character`, `account_character` |
-| Column names | snake_case                     | `character_name`, `created_at`   |
-
-## Code Style
-
-- Use tabs for indentation
-- Use double quotes for strings
-- Always use explicit return types for public methods
-- Prefer async/await over raw promises
-- Use `Builder` pattern from `builder-pattern` for response DTOs
-- Use barrel exports (`index.ts`) in each folder
+| Name | Type | Path | Description |
+| ---- | ---- | ---- | ----------- |
+| **src** | `folder` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src` | Main source directory containing all application code. |
+| **main.ts** | `file` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/main.ts` | Application entry point. Bootstraps the NestJS app, configures CORS, global pipes (ValidationPipe), exception filters, Swagger docs, helmet security, cookie-parser, and starts listening on the configured port. |
+| **app.module.ts** | `file` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/app.module.ts` | Root NestJS module. Imports all feature modules (auth, admin, user, socket, etc.), sets up the global AuthGuard, and configures the nestjs-cls context middleware globally. |
+| **db** | `folder` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/db` | Database layer. Contains TypeORM entities, custom repositories, migration files, a data seeder, the DataSource configuration (datasource.ts), the DbModule, and db.constants.ts for centralized table/column/index naming. |
+| **db/entities** | `folder` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/db/entities` | TypeORM entity definitions for all database tables: Account, Character, Weapon, Match, MatchSession, MatchState, BanPickSlot, CharacterCost, CharacterLevelCost, WeaponCost, CostMilestone, SessionCost, AccountCharacter, StaffRole, StaffRolePermission, Permission, and Notification. |
+| **db/repositories** | `folder` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/db/repositories` | Custom TypeORM repository classes (one per entity), each extending Repository<T> and injected with DataSource. Registered in DbModule for use across feature modules. |
+| **db/seeder** | `folder` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/db/seeder` | Database seeding scripts used to populate initial data (e.g., admin accounts, permissions). Run via `bun run seed`. |
+| **modules** | `folder` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/modules` | Feature modules directory. Organized into admin, user, and shared modules. |
+| **modules/auth** | `folder` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/modules/auth` | Authentication module. Handles login, JWT token issuance/validation, and the global AuthGuard. Provides @SkipAuth() and @RequirePermission() decorators for access control. |
+| **modules/admin** | `folder` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/modules/admin` | Admin-facing feature modules: character, weapon, staff, role, permission, cost-milestone, character-cost, character-level-cost, weapon-cost, and user management. |
+| **modules/user** | `folder` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/modules/user` | User-facing feature modules: character listing, weapon listing, match session management, user profile, and session-cost tracking. |
+| **modules/self** | `folder` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/modules/self` | Module for the currently authenticated user to view and manage their own profile data. |
+| **modules/account-character** | `folder` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/modules/account-character` | Module for managing the association between user accounts and their owned/selected Genshin Impact characters. |
+| **modules/files** | `folder` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/modules/files` | File upload module. Handles uploading assets to Cloudinary. |
+| **modules/hoyolab** | `folder` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/modules/hoyolab` | HoYoLAB integration module. Communicates with the official HoYoLAB public API (e.g., for game data retrieval). |
+| **modules/socket** | `folder` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/modules/socket` | WebSocket module using Socket.IO. Contains the main gateway (socket.gateway.ts), a socket-specific auth guard, exception filter, and sub-services for real-time match/ban-pick event handling. |
+| **modules/notification** | `folder` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/modules/notification` | Notification module for creating and managing in-app notifications pushed to users. |
+| **modules/cron** | `folder` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/modules/cron` | Scheduled task (cron job) module using @nestjs/schedule. Handles periodic background operations. |
+| **providers** | `folder` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/providers` | Third-party service provider wrappers. Currently contains a Google provider with an OAuth2 sub-module. |
+| **providers/google** | `folder` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/providers/google` | Google service provider module, including an OAuth2 sub-module for Google-based authentication flows. |
+| **errors** | `folder` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/errors` | Global error definitions. Contains the base ApiError class and ApiValidationError. All module-specific errors extend ApiError. |
+| **utils** | `folder` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/utils` | Shared utilities including env.ts (typed environment variables via Env object), genshin-banpick-cls.ts (CLS context type), my-exception.filter.ts (global exception filter), plus sub-folders for decorators, DTOs, enums, types, and constants. |
+| **utils/env.ts** | `file` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/utils/env.ts` | Exports the typed Env object for accessing all environment variables throughout the application. Must be updated when new env variables are added. |
+| **utils/genshin-banpick-cls.ts** | `file` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/utils/genshin-banpick-cls.ts` | Defines the typed CLS (continuation-local storage) context shape used by nestjs-cls to carry per-request data such as the current authenticated user profile. |
+| **utils/my-exception.filter.ts** | `file` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/src/utils/my-exception.filter.ts` | Global NestJS exception filter that catches all errors (including ApiError subclasses) and formats them into a standardized API error response. |
+| **.env.example** | `file` | `C:/Works/Personal/genshin-banpick/genshin-banpick-api/.env.example` | Template for the required .env file. Covers server port, CORS origins, database credentials, JWT secrets, cookie settings, Cloudinary credentials, and HoYoLAB API configuration. |
+
+## Scripts
+
+| Name | Description |
+| ---- | ----------- |
+| `build` | Compiles the NestJS application using the Nest CLI (`nest build`), outputting to the /dist directory. |
+| `start` | Starts the application in production mode using the Nest CLI (`nest start`). |
+| `start:dev` | Starts the application in development watch mode (`nest start --watch`). Recommended for local development. |
+| `start:debug` | Starts the application in debug + watch mode with the Node.js inspector enabled. |
+| `start:prod` | Runs the compiled production build directly via Node.js (`node dist/main`). Used in the Docker container. |
+| `lint` | Runs ESLint on all TypeScript files in the src/ directory to report linting errors. |
+| `lint:fix` | Runs ESLint with the --fix flag to automatically fix linting issues in src/. |
+| `prettier` | Checks code formatting of all src/**/*.ts files using Prettier without modifying them. |
+| `prettier:fix` | Applies Prettier formatting to all src/**/*.ts files in-place. |
+| `prepare` | Installs Husky git hooks. Runs automatically after `bun install`. |
+| `test` | Runs the Jest unit test suite. |
+| `test:watch` | Runs Jest in interactive watch mode. |
+| `test:cov` | Runs Jest and generates a code coverage report in the /coverage directory. |
+| `test:debug` | Runs Jest with the Node.js debugger attached, useful for stepping through tests. |
+| `test:e2e` | Runs end-to-end tests using the Jest config at ./test/jest-e2e.json. |
+| `migration:generate` | Generates a new TypeORM migration file by diffing the current entities against the database schema. Outputs to src/db/migrations/. |
+| `migration:run` | Runs all pending TypeORM migrations against the configured database. |
+| `seed` | Executes the database seeder script (src/db/seeder/index.ts) to populate initial data such as admin accounts and permissions. |
+
+## Configurations
+
+| Name | Description |
+| ---- | ----------- |
+| `tsconfig.json` | Root TypeScript configuration. Sets compilation target to ES2021, enables decorator metadata and experimental decorators (required by NestJS/TypeORM), configures path aliases (@utils, @errors, @db, @modules/*, @providers/*) for clean imports, and outputs to /dist. |
+| `tsconfig.build.json` | Extends tsconfig.json for production builds. Excludes node_modules, test files, dist, and spec files to produce a clean build artifact. |
+| `nest-cli.json` | NestJS CLI configuration. Sets the source root to src/ and enables deleteOutDir to clean the /dist folder before each build. |
+| `docker-compose.yaml` | Docker Compose configuration for local development. Spins up a MySQL 8.0 database container (genshin_banpick_mysql) with a persistent volume (genshin_banpick_db_vol) and a dedicated bridge network (genshin_banpick_net). DB credentials and port are sourced from .env. |
+| `Dockerfile` | Multi-stage Docker build for the API. The builder stage installs dependencies with Bun and compiles the app. The runner stage creates a lean production image that runs the compiled output via Node.js. |
+| `.env.example` | Documents all required environment variables: LISTEN_PORT, CORS_ORIGINS, DB_* (MySQL connection), JWT_AT_SECRET/JWT_AT_EXPIRATION, COOKIE_DOMAIN/COOKIE_SECURE, ENABLE_SWAGGER, ADMIN_EMAIL/ADMIN_PASSWORD, CLOUDINARY_*, and HOYOLAB_*. |
+| `.eslintrc.js` | ESLint configuration. Uses @typescript-eslint parser, extends recommended TypeScript and Prettier rules, and relaxes some strict rules (no-explicit-any, no-unused-vars, explicit-function-return-type) for developer convenience. |
+| `.prettierrc` | Prettier code style configuration. Enforces tabs for indentation, double quotes, trailing commas, semicolons, and arrow function parentheses. |
+| `.commitlintrc.cjs` | Commitlint configuration enforcing Conventional Commits format. Restricts commit types to: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert. Max header length is 100 characters. |
+| `changelog.config.js` | Changelog generation configuration for git-cz (commitizen). Defines commit type labels and emoji mappings used when composing commits interactively. |
