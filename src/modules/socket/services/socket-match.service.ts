@@ -163,7 +163,7 @@ export class SocketMatchService {
 
 	@Transactional()
 	private async cancelEmptyMatch(match: MatchEntity) {
-		if (match.status != MatchStatus.LIVE) {
+		if (match.status === MatchStatus.WAITING) {
 			await Promise.all([
 				this.matchRepository.delete(match.id),
 				this.matchStateRepository.delete({ matchId: match.id }),

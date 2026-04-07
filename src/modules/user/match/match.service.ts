@@ -18,7 +18,12 @@ import { AccountCharacterNotFoundError } from "@modules/account-character/errors
 import { WeaponNotFoundError } from "@modules/admin/weapon/errors";
 import { MatchStateResponse } from "@modules/user/match/dto";
 import { GenshinBanpickCls } from "@utils";
-import { MatchSessionStatus, MatchStatus, PlayerSide } from "@utils/enums";
+import {
+	MatchSessionStatus,
+	MatchStatus,
+	MatchType,
+	PlayerSide,
+} from "@utils/enums";
 import { ClsService } from "nestjs-cls";
 import { Transactional } from "typeorm-transactional";
 import { CreateMatchRequest, MatchQuery } from "./dto";
@@ -481,7 +486,10 @@ export class MatchService {
 		}
 	}
 
-	private async ensureSessionDataCompleted(matchSessionId: number) {
+	private async ensureSessionDataCompleted(
+		matchSessionId: number,
+		matchType: MatchType,
+	) {
 		const lockedSlots = await this.banPickSlotRepo.find({
 			where: {
 				matchSessionId,
@@ -524,10 +532,12 @@ export class MatchService {
 				blueChamber1: true,
 				blueChamber2: true,
 				blueChamber3: true,
+				blueResetTimes: true,
 				blueFinalTime: true,
 				redChamber1: true,
 				redChamber2: true,
 				redChamber3: true,
+				redResetTimes: true,
 				redFinalTime: true,
 			},
 		});
@@ -536,6 +546,47 @@ export class MatchService {
 			throw new SessionCompletionValidationError(
 				"Cannot complete session before timer record is saved",
 			);
+		}
+
+		if (matchType === MatchType.REALTIME) {
+			if (sessionRecord.blueChamber1 <= 0 || sessionRecord.redChamber1 <= 0) {
+				throw new SessionCompletionValidationError(
+					"Both Blue and Red chamber 1 time must be greater than 0 for realtime match",
+				);
+			}
+
+			if (
+				sessionRecord.blueChamber2 !== 0 ||
+				sessionRecord.blueChamber3 !== 0 ||
+				sessionRecord.blueResetTimes !== 0
+			) {
+				throw new SessionCompletionValidationError(
+					"Blue chamber 2, chamber 3, and reset times must be 0 for realtime match",
+				);
+			}
+
+			if (
+				sessionRecord.redChamber2 !== 0 ||
+				sessionRecord.redChamber3 !== 0 ||
+				sessionRecord.redResetTimes !== 0
+			) {
+				throw new SessionCompletionValidationError(
+					"Red chamber 2, chamber 3, and reset times must be 0 for realtime match",
+				);
+			}
+
+			if (sessionRecord.blueFinalTime !== sessionRecord.blueChamber1) {
+				throw new SessionCompletionValidationError(
+					"Blue final time must equal chamber 1 time for realtime match",
+				);
+			}
+
+			if (sessionRecord.redFinalTime !== sessionRecord.redChamber1) {
+				throw new SessionCompletionValidationError(
+					"Red final time must equal chamber 1 time for realtime match",
+				);
+			}
+			return;
 		}
 
 		if (sessionRecord.blueFinalTime <= 0 || sessionRecord.redFinalTime <= 0) {
@@ -781,7 +832,7 @@ export class MatchService {
 		const matchState = await this.matchStateRepo.findOneOrCreate(matchId);
 		const currentSession = await this.getCurrentMatchSession(match, matchState);
 
-		await this.ensureSessionDataCompleted(currentSession.id);
+		await this.ensureSessionDataCompleted(currentSession.id, match.type);
 
 		// Mark current session completed
 		currentSession.sessionStatus = MatchSessionStatus.COMPLETED;
@@ -789,7 +840,7 @@ export class MatchService {
 
 		// Fetch all sessions and records to determine wins
 		const sessions = await this.matchSessionRepo.find({
-			where: { matchId },
+			where: { matchId, isDeleted: false },
 			order: { sessionIndex: "ASC", id: "ASC" },
 		});
 
@@ -879,6 +930,12 @@ export class MatchService {
 				await this.matchRepo.update(matchId, {
 					bluePlayerId: match.redPlayerId,
 					redPlayerId: match.bluePlayerId,
+				});
+			} else {
+				// Defensive terminal guard: if there is no pending session left,
+				// this match must be treated as finished instead of remaining LIVE.
+				await this.matchRepo.update(matchId, {
+					status: MatchStatus.COMPLETED,
 				});
 			}
 		}
