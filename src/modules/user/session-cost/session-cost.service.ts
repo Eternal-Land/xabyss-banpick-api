@@ -15,6 +15,8 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { PlayerSide, WeaponCostUnit } from "@utils/enums";
 import { SessionCostRequest } from "./dto";
 import { LessThanOrEqual } from "typeorm";
+import { SocketMatchService } from "@modules/socket/services";
+import { SocketEvents } from "@utils/constants";
 
 @Injectable()
 export class UserSessionCostService {
@@ -91,6 +93,7 @@ export class UserSessionCostService {
 		private readonly costMilestoneRepo: CostMilestoneRepository,
 		private readonly sessionCostRepo: SessionCostRepository,
 		private readonly characterLevelCostRepo: CharacterLevelCostRepository,
+		private readonly socketMatchService: SocketMatchService,
 	) {}
 
 	async getCurrentSessionCost(matchId: string): Promise<SessionCostEntity> {
@@ -128,7 +131,10 @@ export class UserSessionCostService {
 		const sessionCost = await this.findOrCreateSessionCost(matchSessionId);
 
 		const slots = await this.banPickSlotRepo.find({
-			where: { matchSessionId },
+			where: {
+				matchSessionId,
+				slotStatus: "LOCKED",
+			},
 			order: { turnIndex: "DESC" },
 		});
 
@@ -146,121 +152,220 @@ export class UserSessionCostService {
 			);
 		}
 
-		// Character cost
-		const characterCost = await this.characterCostRepo.findOne({
-			where: {
-				characterId: dto.characterId,
-				constellation: dto.activatedConstellation,
-			},
-		});
+		sessionCost.blueTotalCost = 0;
+		sessionCost.blueCostMilestone = 0;
+		sessionCost.blueConstellationCost = 0;
+		sessionCost.blueRefinementCost = 0;
+		sessionCost.blueLevelCost = 0;
+		sessionCost.blueTimeBonusCost = 0;
+		sessionCost.redTotalCost = 0;
+		sessionCost.redCostMilestone = 0;
+		sessionCost.redConstellationCost = 0;
+		sessionCost.redRefinementCost = 0;
+		sessionCost.redLevelCost = 0;
+		sessionCost.redTimeBonusCost = 0;
 
-		if (characterCost && characterCost.cost > 0) {
-			const characterCostValue = this.toNumber(characterCost.cost);
-			if (dto.side === PlayerSide.BLUE) {
-				sessionCost.blueConstellationCost += characterCostValue;
-				sessionCost.blueTotalCost += characterCostValue;
-			} else {
-				sessionCost.redConstellationCost += characterCostValue;
-				sessionCost.redTotalCost += characterCostValue;
-			}
-		}
+		const characterStateCache = new Map<
+			string,
+			{ activatedConstellation: number; characterLevel: number } | null
+		>();
+		const characterCostCache = new Map<string, number>();
+		const characterLevelCostCache = new Map<string, number>();
+		const weaponRarityCache = new Map<number, number | null>();
+		const weaponCostCache = new Map<
+			string,
+			{ totalCost: number; refinementCost: number }
+		>();
 
-		// Character level cost
-		const characterLevelCost = await this.characterLevelCostRepo.findOne({
-			where: {
-				characterId: dto.characterId,
-				level: dto.characterLevel,
-			},
-		});
+		for (const slot of [...slots].reverse()) {
+			const slotSide =
+				slot.matchSide === "BLUE" ? PlayerSide.BLUE : PlayerSide.RED;
 
-		if (characterLevelCost && characterLevelCost.cost > 0) {
-			const characterLevelCostValue = this.toNumber(characterLevelCost.cost);
-			if (dto.side === PlayerSide.BLUE) {
-				sessionCost.blueLevelCost += characterLevelCostValue;
-				sessionCost.blueTotalCost += characterLevelCostValue;
-			} else {
-				sessionCost.redLevelCost += characterLevelCostValue;
-				sessionCost.redTotalCost += characterLevelCostValue;
-			}
-		}
+			if (
+				slot.slotType === "PICK" &&
+				slot.characterId &&
+				slot.selectedByAccountId
+			) {
+				const characterStateKey = `${slot.selectedByAccountId}:${slot.characterId}`;
+				let characterState = characterStateCache.get(characterStateKey);
+				if (characterState === undefined) {
+					const accountCharacter = await this.accountCharacterRepo.findOne({
+						where: {
+							accountId: slot.selectedByAccountId,
+							characterId: slot.characterId,
+						},
+						select: {
+							activatedConstellation: true,
+							characterLevel: true,
+						},
+					});
 
-		// Weapon cost
-		if (dto.weaponId && dto.weaponRefinement) {
-			const weapon = await this.weaponRepo.findOne({
-				where: {
-					id: dto.weaponId,
-					isActive: true,
-				},
-				select: {
-					rarity: true,
-				},
-			});
+					characterState = accountCharacter
+						? {
+								activatedConstellation: accountCharacter.activatedConstellation,
+								characterLevel: accountCharacter.characterLevel,
+							}
+						: null;
+					characterStateCache.set(characterStateKey, characterState);
+				}
 
-			if (!weapon) {
-				throw new NotFoundException("Weapon not found");
-			}
+				if (characterState) {
+					const characterCostKey = `${slot.characterId}:${characterState.activatedConstellation}`;
+					let characterCostValue = characterCostCache.get(characterCostKey);
+					if (characterCostValue === undefined) {
+						const characterCost = await this.characterCostRepo.findOne({
+							where: {
+								characterId: slot.characterId,
+								constellation: characterState.activatedConstellation,
+							},
+							select: { cost: true },
+						});
+						characterCostValue = this.toNumber(characterCost?.cost);
+						characterCostCache.set(characterCostKey, characterCostValue);
+					}
 
-			const resolvedWeaponRarity = dto.weaponRarity ?? weapon.rarity;
-			const weaponCosts = await this.weaponCostRepo.find({
-				where: {
-					weaponRarity: resolvedWeaponRarity,
-					upgradeLevel: LessThanOrEqual(dto.weaponRefinement),
-				},
-			});
-
-			if (weaponCosts.length > 0) {
-				weaponCosts.forEach((cost) => {
-					const costValue = this.toNumber(cost.value);
-					if (dto.side === PlayerSide.BLUE) {
-						if (cost.unit === WeaponCostUnit.SECONDS) {
-							sessionCost.blueRefinementCost += costValue;
+					if (characterCostValue > 0) {
+						if (slotSide === PlayerSide.BLUE) {
+							sessionCost.blueConstellationCost += characterCostValue;
+							sessionCost.blueTotalCost += characterCostValue;
 						} else {
-							sessionCost.blueTotalCost += costValue;
-						}
-					} else {
-						if (cost.unit === WeaponCostUnit.SECONDS) {
-							sessionCost.redRefinementCost += costValue;
-						} else {
-							sessionCost.redTotalCost += costValue;
+							sessionCost.redConstellationCost += characterCostValue;
+							sessionCost.redTotalCost += characterCostValue;
 						}
 					}
-				});
+
+					const levelCostKey = `${slot.characterId}:${characterState.characterLevel}`;
+					let characterLevelCostValue =
+						characterLevelCostCache.get(levelCostKey);
+					if (characterLevelCostValue === undefined) {
+						const characterLevelCost =
+							await this.characterLevelCostRepo.findOne({
+								where: {
+									characterId: slot.characterId,
+									level: characterState.characterLevel,
+								},
+								select: { cost: true },
+							});
+						characterLevelCostValue = this.toNumber(characterLevelCost?.cost);
+						characterLevelCostCache.set(levelCostKey, characterLevelCostValue);
+					}
+
+					if (characterLevelCostValue > 0) {
+						if (slotSide === PlayerSide.BLUE) {
+							sessionCost.blueLevelCost += characterLevelCostValue;
+							sessionCost.blueTotalCost += characterLevelCostValue;
+						} else {
+							sessionCost.redLevelCost += characterLevelCostValue;
+							sessionCost.redTotalCost += characterLevelCostValue;
+						}
+					}
+				}
+			}
+
+			if (
+				slot.slotType === "PICK" &&
+				slot.weaponId &&
+				typeof slot.weaponRefinement === "number" &&
+				slot.weaponRefinement > 0
+			) {
+				let weaponRarity = weaponRarityCache.get(slot.weaponId);
+				if (weaponRarity === undefined) {
+					const weapon = await this.weaponRepo.findOne({
+						where: {
+							id: slot.weaponId,
+							isActive: true,
+						},
+						select: { rarity: true },
+					});
+					weaponRarity = weapon?.rarity ?? null;
+					weaponRarityCache.set(slot.weaponId, weaponRarity);
+				}
+
+				if (weaponRarity) {
+					const weaponCostKey = `${weaponRarity}:${slot.weaponRefinement}`;
+					let cachedWeaponCost = weaponCostCache.get(weaponCostKey);
+					if (!cachedWeaponCost) {
+						const weaponCosts = await this.weaponCostRepo.find({
+							where: {
+								weaponRarity,
+								upgradeLevel: LessThanOrEqual(slot.weaponRefinement),
+							},
+							select: {
+								value: true,
+								unit: true,
+							},
+						});
+
+						cachedWeaponCost = weaponCosts.reduce(
+							(acc, weaponCost) => {
+								const value = this.toNumber(weaponCost.value);
+								if (weaponCost.unit === WeaponCostUnit.SECONDS) {
+									acc.refinementCost += value;
+								} else {
+									acc.totalCost += value;
+								}
+
+								return acc;
+							},
+							{ totalCost: 0, refinementCost: 0 },
+						);
+
+						weaponCostCache.set(weaponCostKey, cachedWeaponCost);
+					}
+
+					if (slotSide === PlayerSide.BLUE) {
+						sessionCost.blueTotalCost += cachedWeaponCost.totalCost;
+						sessionCost.blueRefinementCost += cachedWeaponCost.refinementCost;
+					} else {
+						sessionCost.redTotalCost += cachedWeaponCost.totalCost;
+						sessionCost.redRefinementCost += cachedWeaponCost.refinementCost;
+					}
+				}
 			}
 		}
 
-		// Time bonus cost
-		const currentTotalCost =
-			dto.side === PlayerSide.BLUE
-				? sessionCost.blueTotalCost
-				: sessionCost.redTotalCost;
-
-		const costMilestones = await this.costMilestoneRepo.findOne({
+		const blueMilestone = await this.costMilestoneRepo.findOne({
 			where: {
-				costFrom: LessThanOrEqual(currentTotalCost || 0),
-				costTo: LessThanOrEqual(currentTotalCost || 0),
+				costFrom: LessThanOrEqual(sessionCost.blueTotalCost || 0),
+				costTo: LessThanOrEqual(sessionCost.blueTotalCost || 0),
 			},
 			order: { costFrom: "DESC" },
 		});
-
-		if (costMilestones) {
-			const secPerCost = this.toNumber(costMilestones.secPerCost);
-			if (dto.side === PlayerSide.BLUE) {
-				sessionCost.blueCostMilestone = costMilestones.id;
-				sessionCost.blueTimeBonusCost =
-					this.toNumber(currentTotalCost) * secPerCost +
-					sessionCost.blueConstellationCost +
-					sessionCost.blueRefinementCost +
-					sessionCost.blueLevelCost;
-			} else {
-				sessionCost.redCostMilestone = costMilestones.id;
-				sessionCost.redTimeBonusCost =
-					this.toNumber(currentTotalCost) * secPerCost +
-					sessionCost.redConstellationCost +
-					sessionCost.redRefinementCost +
-					sessionCost.redLevelCost;
-			}
+		if (blueMilestone) {
+			const secPerCost = this.toNumber(blueMilestone.secPerCost);
+			sessionCost.blueCostMilestone = blueMilestone.id;
+			sessionCost.blueTimeBonusCost =
+				this.toNumber(sessionCost.blueTotalCost) * secPerCost +
+				sessionCost.blueConstellationCost +
+				sessionCost.blueRefinementCost +
+				sessionCost.blueLevelCost;
 		}
 
-		return await this.sessionCostRepo.save(sessionCost);
+		const redMilestone = await this.costMilestoneRepo.findOne({
+			where: {
+				costFrom: LessThanOrEqual(sessionCost.redTotalCost || 0),
+				costTo: LessThanOrEqual(sessionCost.redTotalCost || 0),
+			},
+			order: { costFrom: "DESC" },
+		});
+		if (redMilestone) {
+			const secPerCost = this.toNumber(redMilestone.secPerCost);
+			sessionCost.redCostMilestone = redMilestone.id;
+			sessionCost.redTimeBonusCost =
+				this.toNumber(sessionCost.redTotalCost) * secPerCost +
+				sessionCost.redConstellationCost +
+				sessionCost.redRefinementCost +
+				sessionCost.redLevelCost;
+		}
+
+		const savedSessionCost = await this.sessionCostRepo.save(sessionCost);
+
+		this.socketMatchService.emitToMatch(
+			matchSession.matchId,
+			SocketEvents.UPDATE_MATCH_SESSION,
+			{ matchSessionId },
+		);
+
+		return savedSessionCost;
 	}
 }
