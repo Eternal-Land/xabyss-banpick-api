@@ -36,7 +36,6 @@ import {
 	NotYourTurnError,
 	ParticipantNotFoundError,
 	SessionCompletionValidationError,
-	WeaponAlreadySelectedForSideError,
 	WeaponPickRequiresSelectedCharacterError,
 } from "./errors";
 import { SocketMatchService } from "@modules/socket/services";
@@ -231,18 +230,23 @@ export class MatchService {
 			matchSide: string;
 			characterId: number;
 			weaponId: number | null;
+			weaponRefinement: number | null;
 		}>,
 	) {
 		const blueBanChars: string[] = [];
 		const blueSelectedChars: string[] = [];
 		const blueSelectedWeapons: string[] = [];
+		const blueSelectedWeaponRefinements: number[] = [];
 		const redBanChars: string[] = [];
 		const redSelectedChars: string[] = [];
 		const redSelectedWeapons: string[] = [];
+		const redSelectedWeaponRefinements: number[] = [];
 
 		slots.forEach((slot) => {
 			const characterId = String(slot.characterId);
 			const weaponId = slot.weaponId ? String(slot.weaponId) : "";
+			const weaponRefinement =
+				typeof slot.weaponRefinement === "number" ? slot.weaponRefinement : 0;
 
 			if (slot.slotType === "BAN") {
 				if (slot.matchSide === "BLUE") {
@@ -256,9 +260,11 @@ export class MatchService {
 			if (slot.matchSide === "BLUE") {
 				blueSelectedChars.push(characterId);
 				blueSelectedWeapons.push(weaponId);
+				blueSelectedWeaponRefinements.push(weaponRefinement);
 			} else {
 				redSelectedChars.push(characterId);
 				redSelectedWeapons.push(weaponId);
+				redSelectedWeaponRefinements.push(weaponRefinement);
 			}
 		});
 
@@ -268,6 +274,16 @@ export class MatchService {
 		matchState.redBanChars = redBanChars;
 		matchState.redSelectedChars = redSelectedChars;
 		matchState.redSelectedWeapons = redSelectedWeapons;
+
+		const matchStateWithRefinements = matchState as MatchStateEntity & {
+			blueSelectedWeaponRefinements?: number[];
+			redSelectedWeaponRefinements?: number[];
+		};
+
+		matchStateWithRefinements.blueSelectedWeaponRefinements =
+			blueSelectedWeaponRefinements;
+		matchStateWithRefinements.redSelectedWeaponRefinements =
+			redSelectedWeaponRefinements;
 	}
 
 	private async syncMatchStateWithCurrentSession(
@@ -286,6 +302,7 @@ export class MatchService {
 				matchSide: true,
 				characterId: true,
 				weaponId: true,
+				weaponRefinement: true,
 			},
 		});
 
@@ -461,27 +478,6 @@ export class MatchService {
 		if (!Number.isInteger(slot.characterId) || slot.characterId <= 0) {
 			throw new SessionCompletionValidationError(
 				`Missing character selection at step ${expectedTurnIndex + 1}`,
-			);
-		}
-
-		if (expectedSlotType !== "PICK") {
-			return;
-		}
-
-		if (!Number.isInteger(slot.weaponId) || Number(slot.weaponId) <= 0) {
-			throw new SessionCompletionValidationError(
-				`Missing weapon selection for pick step ${expectedTurnIndex + 1}`,
-			);
-		}
-
-		const normalizedRefinement = Number(slot.weaponRefinement);
-		if (
-			!Number.isInteger(normalizedRefinement) ||
-			normalizedRefinement < 1 ||
-			normalizedRefinement > 5
-		) {
-			throw new SessionCompletionValidationError(
-				`Invalid weapon refinement for pick step ${expectedTurnIndex + 1}`,
 			);
 		}
 	}
@@ -805,20 +801,20 @@ export class MatchService {
 			throw new AccountCharacterNotFoundError();
 		}
 
-		const duplicatedSlot = sidePickSlots.find(
-			(slot) =>
-				slot.weaponId === normalizedWeaponId && slot.id !== selectedPickSlot.id,
-		);
-		if (duplicatedSlot) {
-			throw new WeaponAlreadySelectedForSideError();
-		}
-
 		selectedPickSlot.weaponId = normalizedWeaponId;
 		selectedPickSlot.weaponRefinement = normalizedWeaponRefinement;
 		selectedPickSlot.weaponSelectedAt = new Date();
 		await this.banPickSlotRepo.save(selectedPickSlot);
 
-		await this.saveAndBroadcastMatchState(matchId, match);
+		const savedMatchState = await this.saveAndBroadcastMatchState(
+			matchId,
+			match,
+		);
+		this.socketMatchService.emitToMatch(
+			matchId,
+			SocketEvents.UPDATE_MATCH_SESSION,
+			{ matchSessionId: savedMatchState.currentSession },
+		);
 	}
 
 	@Transactional()

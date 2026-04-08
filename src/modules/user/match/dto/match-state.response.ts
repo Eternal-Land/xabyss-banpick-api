@@ -11,12 +11,19 @@ export class MatchStateResponse {
 	blueBanChars: string[];
 	blueSelectedChars: string[];
 	blueSelectedWeapons: string[];
+	blueSelectedWeaponRefinements: number[];
 	redBanChars: string[];
 	redSelectedChars: string[];
 	redSelectedWeapons: string[];
+	redSelectedWeaponRefinements: number[];
 	updatedAt: Date;
 
 	static fromEntity(entity: MatchStateEntity): MatchStateResponse {
+		const matchState = entity as MatchStateEntity & {
+			blueSelectedWeaponRefinements?: number[];
+			redSelectedWeaponRefinements?: number[];
+		};
+
 		return Builder(MatchStateResponse)
 			.hostJoined(entity.hostJoined)
 			.redPlayerJoined(entity.redPlayerJoined)
@@ -26,9 +33,15 @@ export class MatchStateResponse {
 			.blueBanChars(entity.blueBanChars)
 			.blueSelectedChars(entity.blueSelectedChars)
 			.blueSelectedWeapons(entity.blueSelectedWeapons)
+			.blueSelectedWeaponRefinements(
+				matchState.blueSelectedWeaponRefinements ?? [],
+			)
 			.redBanChars(entity.redBanChars)
 			.redSelectedChars(entity.redSelectedChars)
 			.redSelectedWeapons(entity.redSelectedWeapons)
+			.redSelectedWeaponRefinements(
+				matchState.redSelectedWeaponRefinements ?? [],
+			)
 			.updatedAt(entity.updatedAt)
 			.build();
 	}
