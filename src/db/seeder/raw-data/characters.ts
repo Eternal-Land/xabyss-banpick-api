@@ -7,7 +7,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "albedo",
 		name: "Albedo",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877352/albedo_bclkom.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868770/Albedo_qn2dhr.png",
 		rarity: 5,
 		element: CharacterElement.GEO,
 		weaponType: WeaponType.SWORD,
@@ -16,7 +16,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "alhaitham",
 		name: "Alhaitham",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877353/alhaitham_aoazry.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868770/Alhaitham_o3tk3m.png",
 		rarity: 5,
 		element: CharacterElement.DENDRO,
 		weaponType: WeaponType.SWORD,
@@ -25,7 +25,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "aloy",
 		name: "Aloy",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877355/aloy_ncbt19.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868770/Aloy_ndk6rw.png",
 		rarity: 5,
 		element: CharacterElement.CRYO,
 		weaponType: WeaponType.BOW,
@@ -34,7 +34,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "arlecchino",
 		name: "Arlecchino",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877357/arlecchino_dgbyr7.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868771/Arlecchino_jxyass.png",
 		rarity: 5,
 		element: CharacterElement.PYRO,
 		weaponType: WeaponType.POLEARM,
@@ -43,7 +43,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "kamisato_ayaka",
 		name: "Kamisato Ayaka",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877292/kamisato-ayaka_zvsfi9.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868863/Kamisato_Ayaka_dndjm1.png",
 		rarity: 5,
 		element: CharacterElement.CRYO,
 		weaponType: WeaponType.SWORD,
@@ -52,7 +52,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "kamisato_ayato",
 		name: "Kamisato Ayato",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877293/kamisato-ayato_wcczkh.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868885/Kamisato_Ayato_ehuili.png",
 		rarity: 5,
 		element: CharacterElement.HYDRO,
 		weaponType: WeaponType.SWORD,
@@ -61,7 +61,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "baizhu",
 		name: "Baizhu",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877358/baizhu_zwwdc7.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868771/Baizhu_jvttqr.png",
 		rarity: 5,
 		element: CharacterElement.DENDRO,
 		weaponType: WeaponType.CATALYST,
@@ -70,7 +70,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "chasca",
 		name: "Chasca",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877194/chasca_xs4bpj.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868783/Chasca_sqxnly.png",
 		rarity: 5,
 		element: CharacterElement.ANEMO,
 		weaponType: WeaponType.BOW,
@@ -79,7 +79,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "childe",
 		name: "Childe",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877329/tartaglia_hityuo.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776869002/Tartaglia_wziglh.png",
 		rarity: 5,
 		element: CharacterElement.HYDRO,
 		weaponType: WeaponType.BOW,
@@ -88,7 +88,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "chiori",
 		name: "Chiori",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877195/chiori_irx5f4.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868784/Chiori_nwdhyr.png",
 		rarity: 5,
 		element: CharacterElement.GEO,
 		weaponType: WeaponType.SWORD,
@@ -97,7 +97,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "citlali",
 		name: "Citlali",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877194/citlali_jadcyr.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868791/Citlali_aeximg.png",
 		rarity: 5,
 		element: CharacterElement.CRYO,
 		weaponType: WeaponType.CATALYST,
@@ -106,7 +106,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "clorinde",
 		name: "Clorinde",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877195/clorinde_fubhuu.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868791/Clorinde_ibbsjo.png",
 		rarity: 5,
 		element: CharacterElement.ELECTRO,
 		weaponType: WeaponType.SWORD,
@@ -115,7 +115,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "columbina",
 		name: "Columbina",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1770262867/columbina_ndcwbm.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868793/Columbina_b88fw2.png",
 		rarity: 5,
 		element: CharacterElement.HYDRO,
 		weaponType: WeaponType.CATALYST,
@@ -124,7 +124,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "cyno",
 		name: "Cyno",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877196/cyno_gmx21c.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868801/Cyno_gopb9u.png",
 		rarity: 5,
 		element: CharacterElement.ELECTRO,
 		weaponType: WeaponType.POLEARM,
@@ -133,7 +133,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "dehya",
 		name: "Dehya",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877196/dehya_xecypj.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868802/Dehya_xbsnwm.png",
 		rarity: 5,
 		element: CharacterElement.PYRO,
 		weaponType: WeaponType.CLAYMORE,
@@ -142,7 +142,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "diluc",
 		name: "Diluc",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877196/diluc_yylffi.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868803/Diluc_avq4wb.png",
 		rarity: 5,
 		element: CharacterElement.PYRO,
 		weaponType: WeaponType.CLAYMORE,
@@ -151,7 +151,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "durin",
 		name: "Durin",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877198/durin_xzwovg.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868813/Durin_f5jz8k.png",
 		rarity: 5,
 		element: CharacterElement.PYRO,
 		weaponType: WeaponType.SWORD,
@@ -160,7 +160,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "emilie",
 		name: "Emilie",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877199/emilie_clvzzf.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868821/Emilie_agr1bu.png",
 		rarity: 5,
 		element: CharacterElement.DENDRO,
 		weaponType: WeaponType.POLEARM,
@@ -169,7 +169,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "escoffier",
 		name: "Escoffier",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877199/escoffier_z5kod6.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868821/Escoffier_qhkahd.png",
 		rarity: 5,
 		element: CharacterElement.CRYO,
 		weaponType: WeaponType.POLEARM,
@@ -178,7 +178,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "eula",
 		name: "Eula",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877199/escoffier_z5kod6.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868822/Eula_p6x9sb.png",
 		rarity: 5,
 		element: CharacterElement.CRYO,
 		weaponType: WeaponType.CLAYMORE,
@@ -187,7 +187,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "flins",
 		name: "Flins",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877203/flins_ydkygx.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868833/Flins_tjjtaq.png",
 		rarity: 5,
 		element: CharacterElement.ELECTRO,
 		weaponType: WeaponType.POLEARM,
@@ -196,7 +196,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "furina",
 		name: "Furina",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877205/furina_owz4t6.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868833/Flins_tjjtaq.png",
 		rarity: 5,
 		element: CharacterElement.HYDRO,
 		weaponType: WeaponType.SWORD,
@@ -205,7 +205,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "ganyu",
 		name: "Ganyu",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877206/ganyu_q87dva.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868848/Ganyu_uw3dng.png",
 		rarity: 5,
 		element: CharacterElement.CRYO,
 		weaponType: WeaponType.BOW,
@@ -214,7 +214,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "hu_tao",
 		name: "Hu Tao",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877209/hu-tao_fnofog.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868850/Hu_Tao_c5efbr.png",
 		rarity: 5,
 		element: CharacterElement.PYRO,
 		weaponType: WeaponType.POLEARM,
@@ -223,7 +223,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "ineffa",
 		name: "Ineffa",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877210/ineffa_trubhr.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868861/Ineffa_lapluz.png",
 		rarity: 5,
 		element: CharacterElement.ELECTRO,
 		weaponType: WeaponType.POLEARM,
@@ -232,7 +232,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "ataraki_itto",
 		name: "Ataraki Itto",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877356/arataki-itto_i9ku2h.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868771/Arataki_Itto_qzcl1r.png",
 		rarity: 5,
 		element: CharacterElement.GEO,
 		weaponType: WeaponType.CLAYMORE,
@@ -241,7 +241,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "jean",
 		name: "Jean",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877291/jean_fjq3v2.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868862/Jean_g59lk1.png",
 		rarity: 5,
 		element: CharacterElement.ANEMO,
 		weaponType: WeaponType.SWORD,
@@ -250,7 +250,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "kaedehara_kazuha",
 		name: "Kaedehara Kazuha",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877292/kaedehara-kazuha_pwlzd9.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868862/Kaedehara_Kazuha_j6wfci.png",
 		rarity: 5,
 		element: CharacterElement.ANEMO,
 		weaponType: WeaponType.SWORD,
@@ -259,7 +259,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "keqing",
 		name: "Keqing",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877297/keqing_hlp7nv.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868884/Keqing_nuu9zg.png",
 		rarity: 5,
 		element: CharacterElement.ELECTRO,
 		weaponType: WeaponType.SWORD,
@@ -268,7 +268,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "kinich",
 		name: "Kinich",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877297/kinich_grfj3c.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868884/Kinich_xrtlrn.png",
 		rarity: 5,
 		element: CharacterElement.DENDRO,
 		weaponType: WeaponType.CLAYMORE,
@@ -277,7 +277,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "klee",
 		name: "Klee",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877298/klee_dzados.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868897/Klee_cf6ll8.png",
 		rarity: 5,
 		element: CharacterElement.PYRO,
 		weaponType: WeaponType.CATALYST,
@@ -286,7 +286,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "sangonomiya_kokomi",
 		name: "Sangonomiya Kokomi",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877321/sangonomiya-kokomi_va4kxz.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868973/Sangonomiya_Kokomi_pnph9x.png",
 		rarity: 5,
 		element: CharacterElement.HYDRO,
 		weaponType: WeaponType.CATALYST,
@@ -295,7 +295,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "lauma",
 		name: "Lauma",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877302/lauma_d1kadq.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868899/Lauma_vwhxvo.png",
 		rarity: 5,
 		element: CharacterElement.DENDRO,
 		weaponType: WeaponType.CATALYST,
@@ -313,7 +313,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "lyney",
 		name: "Lyney",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877305/lyney_gxuuwv.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868919/Lyney_bmwsku.png",
 		rarity: 5,
 		element: CharacterElement.PYRO,
 		weaponType: WeaponType.BOW,
@@ -322,7 +322,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "mavuika",
 		name: "Mavuika",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877306/mavuika_qc2av8.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868924/Mavuika_kfs78d.png",
 		rarity: 5,
 		element: CharacterElement.PYRO,
 		weaponType: WeaponType.CLAYMORE,
@@ -331,7 +331,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "mona",
 		name: "Mona",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877309/mona_cnvsz9.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868931/Mona_ftjfoi.png",
 		rarity: 5,
 		element: CharacterElement.HYDRO,
 		weaponType: WeaponType.CATALYST,
@@ -340,7 +340,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "mualani",
 		name: "Mualani",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877309/mualani_wwfh9h.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868932/Mualani_cdqfnn.png",
 		rarity: 5,
 		element: CharacterElement.HYDRO,
 		weaponType: WeaponType.CATALYST,
@@ -349,7 +349,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "nahida",
 		name: "Nahida",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877310/nahida_gjvmxf.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868934/Nahida_x3zjue.png",
 		rarity: 5,
 		element: CharacterElement.DENDRO,
 		weaponType: WeaponType.CATALYST,
@@ -358,7 +358,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "navia",
 		name: "Navia",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877310/navia_n5zy9x.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868941/Navia_fydgbm.png",
 		rarity: 5,
 		element: CharacterElement.GEO,
 		weaponType: WeaponType.CLAYMORE,
@@ -367,7 +367,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "nefer",
 		name: "Nefer",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877311/nefer_ear1nl.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868942/Nefer_pnhfl9.png",
 		rarity: 5,
 		element: CharacterElement.DENDRO,
 		weaponType: WeaponType.CATALYST,
@@ -376,7 +376,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "neuvillette",
 		name: "Neuvillette",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877314/neuvillette_wvesxo.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868949/Neuvillette_rxhbgu.png",
 		rarity: 5,
 		element: CharacterElement.HYDRO,
 		weaponType: WeaponType.CATALYST,
@@ -385,7 +385,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "nilou",
 		name: "Nilou",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877314/nilou_iymxj3.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868950/Nilou_gnoimr.png",
 		rarity: 5,
 		element: CharacterElement.HYDRO,
 		weaponType: WeaponType.SWORD,
@@ -394,7 +394,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "qiqi",
 		name: "Qiqi",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877318/qiqi_lt8jtv.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868962/Qiqi_li1wtp.png",
 		rarity: 5,
 		element: CharacterElement.CRYO,
 		weaponType: WeaponType.SWORD,
@@ -403,7 +403,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "raiden_shogun",
 		name: "Raiden Shogun",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877319/raiden-shogun_lxknci.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868963/Raiden_Shogun_a9ffwb.png",
 		rarity: 5,
 		element: CharacterElement.ELECTRO,
 		weaponType: WeaponType.POLEARM,
@@ -412,7 +412,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "shenhe",
 		name: "Shenhe",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877323/shenhe_fy5ecv.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868985/Shenhe_x3sfkq.png",
 		rarity: 5,
 		element: CharacterElement.CRYO,
 		weaponType: WeaponType.POLEARM,
@@ -421,7 +421,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "sigewinne",
 		name: "Sigewinne",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877325/sigewinne_nmfuhi.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868993/Sigewinne_xlrbei.png",
 		rarity: 5,
 		element: CharacterElement.HYDRO,
 		weaponType: WeaponType.BOW,
@@ -430,7 +430,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "skirk",
 		name: "Skirk",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877326/skirk_fq6fjc.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868993/Skirk_xhs0to.png",
 		rarity: 5,
 		element: CharacterElement.CRYO,
 		weaponType: WeaponType.SWORD,
@@ -439,7 +439,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "tighnari",
 		name: "Tighnari",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877330/tighnari_v8gjv7.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776869004/Tighnari_rwn7ul.png",
 		rarity: 5,
 		element: CharacterElement.DENDRO,
 		weaponType: WeaponType.BOW,
@@ -448,7 +448,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "traveller_anemo",
 		name: "Traveller Anemo",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877331/traveler_cvshcm.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868910/Lumine_tpns8m.png",
 		rarity: 5,
 		element: CharacterElement.ANEMO,
 		weaponType: WeaponType.SWORD,
@@ -457,7 +457,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "traveller_geo",
 		name: "Traveller Geo",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877331/traveler_cvshcm.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868910/Lumine_tpns8m.png",
 		rarity: 5,
 		element: CharacterElement.GEO,
 		weaponType: WeaponType.SWORD,
@@ -466,7 +466,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "traveller_electro",
 		name: "Traveller Electro",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877331/traveler_cvshcm.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868910/Lumine_tpns8m.png",
 		rarity: 5,
 		element: CharacterElement.ELECTRO,
 		weaponType: WeaponType.SWORD,
@@ -475,7 +475,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "traveller_dendro",
 		name: "Traveller Dendro",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877331/traveler_cvshcm.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868910/Lumine_tpns8m.png",
 		rarity: 5,
 		element: CharacterElement.DENDRO,
 		weaponType: WeaponType.SWORD,
@@ -484,7 +484,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "traveller_hydro",
 		name: "Traveller Hydro",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877331/traveler_cvshcm.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868910/Lumine_tpns8m.png",
 		rarity: 5,
 		element: CharacterElement.HYDRO,
 		weaponType: WeaponType.SWORD,
@@ -493,7 +493,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "traveller_pyro",
 		name: "Traveller Pyro",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877331/traveler_cvshcm.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868910/Lumine_tpns8m.png",
 		rarity: 5,
 		element: CharacterElement.PYRO,
 		weaponType: WeaponType.SWORD,
@@ -502,7 +502,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "varesa",
 		name: "Varesa",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877333/varesa_wo7mqb.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776869004/Varesa_lppkrz.png",
 		rarity: 5,
 		element: CharacterElement.ELECTRO,
 		weaponType: WeaponType.CATALYST,
@@ -511,7 +511,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "venti",
 		name: "Venti",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877333/venti_fetznx.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776869010/Venti_q8ybvm.png",
 		rarity: 5,
 		element: CharacterElement.ANEMO,
 		weaponType: WeaponType.BOW,
@@ -520,7 +520,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "wanderer",
 		name: "Wanderer",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877334/wanderer_yksx2a.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776869012/Wanderer_mnhmc6.png",
 		rarity: 5,
 		element: CharacterElement.ANEMO,
 		weaponType: WeaponType.CATALYST,
@@ -529,7 +529,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "wriothesley",
 		name: "Wriothesley",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877336/wriothesley_fhsssu.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776869016/Wriothesley_bhw1ug.png",
 		rarity: 5,
 		element: CharacterElement.CRYO,
 		weaponType: WeaponType.CATALYST,
@@ -538,7 +538,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "xianyun",
 		name: "Xianyun",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877337/xianyun_zqkmba.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776869025/Xianyun_conasb.png",
 		rarity: 5,
 		element: CharacterElement.ANEMO,
 		weaponType: WeaponType.CATALYST,
@@ -547,7 +547,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "xiao",
 		name: "Xiao",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877337/xiao_j19a4a.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776869026/Xiao_dllexg.png",
 		rarity: 5,
 		element: CharacterElement.ANEMO,
 		weaponType: WeaponType.POLEARM,
@@ -556,7 +556,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "xilonen",
 		name: "Xilonen",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877339/xilonen_lbsbje.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776869026/Xilonen_dzglyn.png",
 		rarity: 5,
 		element: CharacterElement.GEO,
 		weaponType: WeaponType.SWORD,
@@ -565,7 +565,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "yae_miko",
 		name: "Yae Miko",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877343/yae-miko_gfdkbp.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776869040/Yae_Miko_vvezhm.png",
 		rarity: 5,
 		element: CharacterElement.ELECTRO,
 		weaponType: WeaponType.CATALYST,
@@ -574,7 +574,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "yelan",
 		name: "Yelan",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877348/yelan_xvxvv4.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776869052/Yelan_drxmmt.png",
 		rarity: 5,
 		element: CharacterElement.HYDRO,
 		weaponType: WeaponType.BOW,
@@ -583,7 +583,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "yoimiya",
 		name: "Yoimiya",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877354/yoimiya_cpe7vc.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776869053/Yoimiya_eyhpbb.png",
 		rarity: 5,
 		element: CharacterElement.PYRO,
 		weaponType: WeaponType.BOW,
@@ -592,7 +592,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "yumemizuki_mizuki",
 		name: "Yumemizuki Mizuki",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877309/mizuki_bzoma5.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776869054/Yumemizuki_Mizuki_ostjam.png",
 		rarity: 5,
 		element: CharacterElement.ANEMO,
 		weaponType: WeaponType.CATALYST,
@@ -601,7 +601,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "zhongli",
 		name: "Zhongli",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877352/zhongli_dyd174.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776869063/Zhongli_r8klkw.png",
 		rarity: 5,
 		element: CharacterElement.GEO,
 		weaponType: WeaponType.POLEARM,
@@ -610,7 +610,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "zibai",
 		name: "Zibai",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1770262867/zibai_zktbud.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776869064/Zibai_fzyptq.png",
 		rarity: 5,
 		element: CharacterElement.GEO,
 		weaponType: WeaponType.SWORD,
@@ -619,7 +619,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "aino",
 		name: "Aino",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877352/aino_oreekw.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868775/Aino_ibmusk.png",
 		rarity: 4,
 		element: CharacterElement.HYDRO,
 		weaponType: WeaponType.CLAYMORE,
@@ -628,7 +628,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "amber",
 		name: "Amber",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877356/amber_kl46jn.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868770/Amber_ysemyo.png",
 		rarity: 4,
 		element: CharacterElement.PYRO,
 		weaponType: WeaponType.BOW,
@@ -637,7 +637,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "barbara",
 		name: "Barbara",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877361/barbara_drm2ra.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868771/Barbara_ztecy2.png",
 		rarity: 4,
 		element: CharacterElement.HYDRO,
 		weaponType: WeaponType.CATALYST,
@@ -646,7 +646,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "beidou",
 		name: "Beidou",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877361/beidou_jmy3o0.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868771/Beidou_ljeszq.png",
 		rarity: 4,
 		element: CharacterElement.ELECTRO,
 		weaponType: WeaponType.CLAYMORE,
@@ -655,7 +655,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "bennett",
 		name: "Bennett",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877361/bennett_jlrnvc.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868778/Bennett_gzs3zm.png",
 		rarity: 4,
 		element: CharacterElement.PYRO,
 		weaponType: WeaponType.SWORD,
@@ -664,7 +664,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "candace",
 		name: "Candace",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877194/candace_l7muhp.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868777/Candace_monz0a.png",
 		rarity: 4,
 		element: CharacterElement.HYDRO,
 		weaponType: WeaponType.POLEARM,
@@ -673,7 +673,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "charlotte",
 		name: "Charlotte",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877194/charlotte_g19k7t.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868779/Charlotte_me5yrp.png",
 		rarity: 4,
 		element: CharacterElement.CRYO,
 		weaponType: WeaponType.CATALYST,
@@ -682,7 +682,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "chevreuse",
 		name: "Chevreuse",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877195/chevreuse_zegupr.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868784/Chevreuse_q9oalj.png",
 		rarity: 4,
 		element: CharacterElement.PYRO,
 		weaponType: WeaponType.POLEARM,
@@ -691,7 +691,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "chongyun",
 		name: "Chongyun",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877195/chongyun_daymst.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868785/Chongyun_uzys7l.png",
 		rarity: 4,
 		element: CharacterElement.CRYO,
 		weaponType: WeaponType.CLAYMORE,
@@ -700,7 +700,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "collei",
 		name: "Collei",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877195/collei_d2hooz.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868792/Collei_qwbmph.png",
 		rarity: 4,
 		element: CharacterElement.DENDRO,
 		weaponType: WeaponType.BOW,
@@ -709,7 +709,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "dahlia",
 		name: "Dahlia",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877195/dahlia_trclpm.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868802/Dahia_avfxu1.png",
 		rarity: 4,
 		element: CharacterElement.HYDRO,
 		weaponType: WeaponType.CATALYST,
@@ -718,7 +718,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "diona",
 		name: "Diona",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877197/diona_svoa8r.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868812/Diona_idvhqf.png",
 		rarity: 4,
 		element: CharacterElement.CRYO,
 		weaponType: WeaponType.BOW,
@@ -727,7 +727,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "dori",
 		name: "Dori",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877198/dori_qsahif.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868812/Dori_jbtxsg.png",
 		rarity: 4,
 		element: CharacterElement.ELECTRO,
 		weaponType: WeaponType.CATALYST,
@@ -736,7 +736,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "faruzan",
 		name: "Faruzan",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877201/faruzan_vf1axf.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868822/Faruzan_t451ie.png",
 		rarity: 4,
 		element: CharacterElement.ANEMO,
 		weaponType: WeaponType.BOW,
@@ -745,7 +745,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "fischl",
 		name: "Fischl",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877202/fischl_akwncc.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868832/Fischl_cci5gz.png",
 		rarity: 4,
 		element: CharacterElement.ELECTRO,
 		weaponType: WeaponType.BOW,
@@ -754,7 +754,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "freminet",
 		name: "Freminet",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877204/freminet_k3o561.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868833/Freminet_vmyni8.png",
 		rarity: 4,
 		element: CharacterElement.CRYO,
 		weaponType: WeaponType.CLAYMORE,
@@ -763,7 +763,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "gaming",
 		name: "Gaming",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877206/gaming_ed1l0r.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868848/Gaming_ueluwz.png",
 		rarity: 4,
 		element: CharacterElement.PYRO,
 		weaponType: WeaponType.CLAYMORE,
@@ -772,7 +772,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "gorou",
 		name: "Gorou",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877209/gorou_tgxkso.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868848/Gorou_q4znj1.png",
 		rarity: 4,
 		element: CharacterElement.GEO,
 		weaponType: WeaponType.BOW,
@@ -781,7 +781,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "shikanoin_heizou",
 		name: "Shikanoin Heizou",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877325/shikanoin-heizou_e2blqn.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868992/Shikanoin_Heizou_oobivk.png",
 		rarity: 4,
 		element: CharacterElement.ANEMO,
 		weaponType: WeaponType.CATALYST,
@@ -790,7 +790,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "iansan",
 		name: "Iansan",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877210/iansan_otxvo3.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868865/Iansan_q0sz9j.png",
 		rarity: 4,
 		element: CharacterElement.ELECTRO,
 		weaponType: WeaponType.POLEARM,
@@ -799,7 +799,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "ifa",
 		name: "Ifa",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877210/ifa_d8it42.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868861/Ifa_o0bbz4.png",
 		rarity: 4,
 		element: CharacterElement.ANEMO,
 		weaponType: WeaponType.CATALYST,
@@ -808,7 +808,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "illuga",
 		name: "Illuga",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1770262867/illuga_btdqzi.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868861/Illuga_p8v6ax.png",
 		rarity: 4,
 		element: CharacterElement.GEO,
 		weaponType: WeaponType.POLEARM,
@@ -817,7 +817,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "jahoda",
 		name: "Jahoda",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877242/jahoda_oovop8.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868862/Jahoda_qi9v8w.png",
 		rarity: 4,
 		element: CharacterElement.ANEMO,
 		weaponType: WeaponType.BOW,
@@ -826,7 +826,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "kachina",
 		name: "Kachina",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877291/kachina_t8znwu.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868862/Kachina_rgu2ks.png",
 		rarity: 4,
 		element: CharacterElement.GEO,
 		weaponType: WeaponType.POLEARM,
@@ -835,7 +835,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "kaeya",
 		name: "Kaeya",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877292/kaeya_qqpjf6.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868862/Kaeya_yzvnai.png",
 		rarity: 4,
 		element: CharacterElement.CRYO,
 		weaponType: WeaponType.SWORD,
@@ -844,7 +844,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "kaveh",
 		name: "Kaveh",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877297/kaveh_vybebg.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868883/Kaveh_dqe0b6.png",
 		rarity: 4,
 		element: CharacterElement.DENDRO,
 		weaponType: WeaponType.CLAYMORE,
@@ -853,7 +853,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "kirara",
 		name: "Kirara",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877298/kirara_xsr4on.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868888/Kirara_wmqmgj.png",
 		rarity: 4,
 		element: CharacterElement.DENDRO,
 		weaponType: WeaponType.SWORD,
@@ -862,7 +862,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "kuki_shinobu",
 		name: "Kuki Shinobu",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877301/kuki-shinobu_cjbyye.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868898/Kuki_Shinobu_o4hibc.png",
 		rarity: 4,
 		element: CharacterElement.ELECTRO,
 		weaponType: WeaponType.SWORD,
@@ -871,7 +871,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "lan_yan",
 		name: "Lan Yan",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877301/lanyan_xjaivw.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868898/Lan_Yan_y4hcy3.png",
 		rarity: 4,
 		element: CharacterElement.ANEMO,
 		weaponType: WeaponType.CATALYST,
@@ -880,7 +880,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "layla",
 		name: "Layla",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877302/layla_jjh6ez.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868908/Layla_hsc7z5.png",
 		rarity: 4,
 		element: CharacterElement.CRYO,
 		weaponType: WeaponType.SWORD,
@@ -889,7 +889,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "lisa",
 		name: "Lisa",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877305/lisa_lutid4.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868909/Lisa_vdhblk.png",
 		rarity: 4,
 		element: CharacterElement.ELECTRO,
 		weaponType: WeaponType.CATALYST,
@@ -898,7 +898,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "lynette",
 		name: "Lynette",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877305/lynette_zzxbsz.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868918/Lynette_bbuuo0.png",
 		rarity: 4,
 		element: CharacterElement.ANEMO,
 		weaponType: WeaponType.SWORD,
@@ -907,7 +907,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "mika",
 		name: "Mika",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877306/mika_wu2vk0.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868926/Mika_jdmd4c.png",
 		rarity: 4,
 		element: CharacterElement.CRYO,
 		weaponType: WeaponType.POLEARM,
@@ -916,7 +916,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "ningguang",
 		name: "Ningguang",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877314/ningguang_h7slif.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868957/Ningguang_tzj0bm.png",
 		rarity: 4,
 		element: CharacterElement.GEO,
 		weaponType: WeaponType.CATALYST,
@@ -925,7 +925,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "noelle",
 		name: "Noelle",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877315/noelle_po5sjk.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868961/Noelle_ihb6jz.png",
 		rarity: 4,
 		element: CharacterElement.GEO,
 		weaponType: WeaponType.CLAYMORE,
@@ -934,7 +934,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "ororon",
 		name: "Ororon",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877317/ororon_vgkcux.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868962/Ororon_opxmxf.png",
 		rarity: 4,
 		element: CharacterElement.ELECTRO,
 		weaponType: WeaponType.BOW,
@@ -943,7 +943,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "razor",
 		name: "Razor",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877320/razor_munmky.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868972/Razor_zppa0p.png",
 		rarity: 4,
 		element: CharacterElement.ELECTRO,
 		weaponType: WeaponType.CLAYMORE,
@@ -952,7 +952,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "rosaria",
 		name: "Rosaria",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877321/rosaria_jsfbwx.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868973/Rosaria_wwzfqt.png",
 		rarity: 4,
 		element: CharacterElement.CRYO,
 		weaponType: WeaponType.POLEARM,
@@ -961,7 +961,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "kujou_sara",
 		name: "Kujou Sara",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877301/kujou-sara_hjzujq.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868897/Kujou_Sara_p6woka.png",
 		rarity: 4,
 		element: CharacterElement.ELECTRO,
 		weaponType: WeaponType.BOW,
@@ -970,7 +970,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "sayu",
 		name: "Sayu",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877322/sayu_p3eqcx.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868982/Sayu_g4rjtn.png",
 		rarity: 4,
 		element: CharacterElement.ANEMO,
 		weaponType: WeaponType.CLAYMORE,
@@ -979,7 +979,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "sethos",
 		name: "Sethos",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877323/sethos_g346tf.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868983/Sethos_bj1209.png",
 		rarity: 4,
 		element: CharacterElement.ELECTRO,
 		weaponType: WeaponType.BOW,
@@ -988,7 +988,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "sucrose",
 		name: "Sucrose",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877328/sucrose_jl08gt.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868996/Sucrose_hqsvnx.png",
 		rarity: 4,
 		element: CharacterElement.ANEMO,
 		weaponType: WeaponType.CATALYST,
@@ -997,7 +997,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "thoma",
 		name: "Thoma",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877329/thoma_wxid5l.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776869003/Thoma_u5jajl.png",
 		rarity: 4,
 		element: CharacterElement.PYRO,
 		weaponType: WeaponType.POLEARM,
@@ -1006,7 +1006,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "xiangling",
 		name: "Xiangling",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877336/xiangling_sb0fn3.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776869017/Xiangling_dbin0l.png",
 		rarity: 4,
 		element: CharacterElement.PYRO,
 		weaponType: WeaponType.POLEARM,
@@ -1015,7 +1015,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "xingqiu",
 		name: "Xingqiu",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877341/xingqiu_rpiuky.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776869027/Xingqiu_ef2esx.png",
 		rarity: 4,
 		element: CharacterElement.HYDRO,
 		weaponType: WeaponType.SWORD,
@@ -1024,7 +1024,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "xinyan",
 		name: "Xinyan",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877341/xinyan_lrbrph.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776869039/Xinyan_sz6olp.png",
 		rarity: 4,
 		element: CharacterElement.PYRO,
 		weaponType: WeaponType.CLAYMORE,
@@ -1033,7 +1033,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "yanfei",
 		name: "Yanfei",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877347/yanfei_yiip4k.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776869047/Yanfei_o7bl9c.png",
 		rarity: 4,
 		element: CharacterElement.PYRO,
 		weaponType: WeaponType.CATALYST,
@@ -1042,7 +1042,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "yaoyao",
 		name: "Yaoyao",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877347/yaoyao_qi3br3.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776869052/Yaoyao_l2cn1f.png",
 		rarity: 4,
 		element: CharacterElement.DENDRO,
 		weaponType: WeaponType.POLEARM,
@@ -1051,7 +1051,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "yun_jin",
 		name: "Yun Jin",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1768877351/yun-jin_ayv0qh.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776869063/Yun_Jin_zwta2t.png",
 		rarity: 4,
 		element: CharacterElement.GEO,
 		weaponType: WeaponType.POLEARM,
