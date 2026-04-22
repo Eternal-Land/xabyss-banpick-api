@@ -1,5 +1,5 @@
 services:
-  genshin_banpick_mysql:
+  xabyss_mysql:
     image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASS}
@@ -7,14 +7,14 @@ services:
     ports:
       - ${DB_PORT}:3306
     volumes:
-      - genshin_banpick_db_vol:/var/lib/mysql
+      - xabyss_db_vol:/var/lib/mysql
     networks:
-      - genshin_banpick_net
+      - xabyss_net
 
 networks:
-  genshin_banpick_net:
-    name: genshin_banpick_net
+  xabyss_net:
+    name: xabyss_net
     driver: bridge
 
 volumes:
-  genshin_banpick_db_vol:
+  xabyss_db_vol:
