@@ -143,6 +143,10 @@ export const ColumnNames = {
 		redBanChars: "red_ban_chars",
 		redSelectedChars: "red_selected_chars",
 		redSelectedWeapons: "red_selected_weapons",
+		blueTimeBank: "blue_time_bank",
+		redTimeBank: "red_time_bank",
+		turnStartedAt: "turn_started_at",
+		draftStep: "draft_step",
 	},
 	BanPickSlot: {
 		id: "ban_pick_slot_id",

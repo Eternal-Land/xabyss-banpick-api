@@ -40,17 +40,21 @@ import {
 	SessionCompletionValidationError,
 	WeaponPickRequiresSelectedCharacterError,
 } from "./errors";
+import { DraftTimerService } from "./draft-timer.service";
 import { SocketMatchService } from "@modules/socket/services";
 import { SocketEvents } from "@utils/constants";
 import { In, Not } from "typeorm";
 import { UserSessionCostService } from "../session-cost";
+
+export const TURN_DURATION_SECONDS = 20;
+export const TIME_BANK_SECONDS = 120;
 
 interface DraftAction {
 	side: PlayerSide;
 	type: "ban" | "pick";
 }
 
-const DRAFT_SEQUENCE: DraftAction[] = [
+export const DRAFT_SEQUENCE: DraftAction[] = [
 	{ side: PlayerSide.BLUE, type: "ban" },
 	{ side: PlayerSide.RED, type: "ban" },
 	{ side: PlayerSide.BLUE, type: "ban" },
@@ -94,6 +98,7 @@ export class MatchService {
 		private readonly weaponRepo: WeaponRepository,
 		private readonly sessionRecordRepo: SessionRecordRepository,
 		private readonly sessionCostRepo: SessionCostRepository,
+		private readonly draftTimerService: DraftTimerService,
 	) {}
 
 	@Transactional()
@@ -145,6 +150,10 @@ export class MatchService {
 			redBanChars: [],
 			redSelectedChars: [],
 			redSelectedWeapons: [],
+			blueTimeBank: TIME_BANK_SECONDS,
+			redTimeBank: TIME_BANK_SECONDS,
+			turnStartedAt: null,
+			draftStep: 0,
 		});
 
 		const match = await this.matchRepo.findOne({ where: { id: matchId } });
@@ -295,14 +304,17 @@ export class MatchService {
 		matchState: MatchStateEntity,
 	) {
 		const currentSession = await this.getCurrentMatchSession(match, matchState);
-		const slots = await this.banPickSlotRepo.find({
+
+		// Fetch ALL slots (LOCKED + SKIPPED) for total draftStep count
+		const allSlots = await this.banPickSlotRepo.find({
 			where: {
 				matchSessionId: currentSession.id,
-				slotStatus: "LOCKED",
+				slotStatus: In(["LOCKED", "SKIPPED"]),
 			},
 			order: { turnIndex: "ASC" },
 			select: {
 				slotType: true,
+				slotStatus: true,
 				matchSide: true,
 				characterId: true,
 				weaponId: true,
@@ -310,19 +322,21 @@ export class MatchService {
 			},
 		});
 
-		this.mapSlotsToMatchState(matchState, slots);
+		// Only LOCKED slots contribute to character/weapon arrays
+		const lockedSlots = allSlots.filter((s) => s.slotStatus === "LOCKED");
+		this.mapSlotsToMatchState(matchState, lockedSlots);
 
-		const draftStep = Math.min(
-			matchState.blueBanChars.length +
-				matchState.blueSelectedChars.length +
-				matchState.redBanChars.length +
-				matchState.redSelectedChars.length,
-			DRAFT_SEQUENCE.length,
-		);
+		const draftStep = Math.min(allSlots.length, DRAFT_SEQUENCE.length);
+		matchState.draftStep = draftStep;
 
 		const nextAction = DRAFT_SEQUENCE[draftStep];
 		if (nextAction && matchState.currentTurn !== nextAction.side) {
 			matchState.currentTurn = nextAction.side;
+		}
+
+		// Ensure turnStartedAt is set for in-progress drafts (covers pre-migration matches)
+		if (nextAction && !matchState.turnStartedAt) {
+			matchState.turnStartedAt = new Date();
 		}
 
 		return await this.matchStateRepo.save(matchState);
@@ -378,6 +392,7 @@ export class MatchService {
 	@Transactional()
 	async deleteOne(id: string) {
 		await this.findOne(id, { isHost: true, isNotStarted: true });
+		this.draftTimerService.cancel(id);
 		const sessions = await this.matchSessionRepo.find({
 			where: { matchId: id, isDeleted: false },
 			select: { id: true },
@@ -407,7 +422,21 @@ export class MatchService {
 	async startMatch(matchId: string) {
 		await this.findOne(matchId, { isHost: true, isNotStarted: true });
 		await this.matchRepo.update(matchId, { status: MatchStatus.LIVE });
+
+		// Initialize timer state on match start
+		const matchState = await this.matchStateRepo.findOneOrCreate(matchId);
+		matchState.turnStartedAt = new Date();
+		matchState.blueTimeBank = TIME_BANK_SECONDS;
+		matchState.redTimeBank = TIME_BANK_SECONDS;
+		matchState.draftStep = 0;
+		await this.matchStateRepo.save(matchState);
+
 		this.socketMatchService.emitToMatch(matchId, SocketEvents.MATCH_STARTED);
+
+		// Schedule the first turn timeout
+		await this.draftTimerService.scheduleFromMatchState(matchId);
+
+		return matchState;
 	}
 
 	private getPlayerSide(match: MatchEntity, playerId: string) {
@@ -490,15 +519,16 @@ export class MatchService {
 		matchSessionId: number,
 		matchType: MatchType,
 	) {
-		const lockedSlots = await this.banPickSlotRepo.find({
+		const allSlots = await this.banPickSlotRepo.find({
 			where: {
 				matchSessionId,
-				slotStatus: "LOCKED",
+				slotStatus: In(["LOCKED", "SKIPPED"]),
 			},
 			order: { turnIndex: "ASC" },
 			select: {
 				turnIndex: true,
 				slotType: true,
+				slotStatus: true,
 				matchSide: true,
 				characterId: true,
 				weaponId: true,
@@ -506,18 +536,23 @@ export class MatchService {
 			},
 		});
 
-		if (lockedSlots.length !== DRAFT_SEQUENCE.length) {
+		if (allSlots.length !== DRAFT_SEQUENCE.length) {
 			throw new SessionCompletionValidationError(
 				"Cannot complete session before ban/pick draft is fully completed",
 			);
 		}
 
-		lockedSlots.forEach((slot, index) => {
+		allSlots.forEach((slot, index) => {
 			const expectedAction = DRAFT_SEQUENCE[index];
 			if (!expectedAction) {
 				throw new SessionCompletionValidationError(
 					"Draft contains unexpected extra action",
 				);
+			}
+
+			// Skipped slots are valid — they just have no character
+			if (slot.slotStatus === "SKIPPED") {
+				return;
 			}
 
 			this.validateSlotAgainstExpectedDraftAction(slot, expectedAction, index);
@@ -687,6 +722,7 @@ export class MatchService {
 		}
 
 		this.ensureCorrectTurn(matchState, playerSide);
+		this.deductTimeBank(matchState, playerSide);
 
 		const selectedAccountCharacter = await this.accountCharacterRepo.findOne({
 			where: {
@@ -708,7 +744,14 @@ export class MatchService {
 			charId,
 			playerId,
 		);
+
+		matchState.draftStep += 1;
+		matchState.turnStartedAt = new Date();
+		await this.matchStateRepo.save(matchState);
+
+		await this.advanceTurn(matchState);
 		await this.saveAndBroadcastMatchState(matchId, match);
+		await this.draftTimerService.scheduleFromMatchState(matchId);
 	}
 
 	@Transactional()
@@ -726,6 +769,7 @@ export class MatchService {
 		}
 
 		this.ensureCorrectTurn(matchState, playerSide);
+		this.deductTimeBank(matchState, playerSide);
 
 		await this.ensureCharacterNotUsedInSession(matchSession.id, charId);
 
@@ -736,6 +780,132 @@ export class MatchService {
 			charId,
 			playerId,
 		);
+
+		matchState.draftStep += 1;
+		matchState.turnStartedAt = new Date();
+		await this.matchStateRepo.save(matchState);
+
+		await this.advanceTurn(matchState);
+		await this.saveAndBroadcastMatchState(matchId, match);
+		await this.draftTimerService.scheduleFromMatchState(matchId);
+	}
+
+	/**
+	 * Deduct time from the player's time bank if the turn took longer than TURN_DURATION_SECONDS.
+	 * Throws if the bank would go negative (turn was already auto-skipped by the server).
+	 */
+	private deductTimeBank(matchState: MatchStateEntity, playerSide: PlayerSide) {
+		if (!matchState.turnStartedAt) {
+			return;
+		}
+
+		const elapsedSeconds =
+			(Date.now() - matchState.turnStartedAt.getTime()) / 1000;
+		const overtime = elapsedSeconds - TURN_DURATION_SECONDS;
+
+		if (overtime <= 0) {
+			return;
+		}
+
+		const bankKey =
+			playerSide === PlayerSide.BLUE ? "blueTimeBank" : "redTimeBank";
+		const remaining = matchState[bankKey] - overtime;
+
+		if (remaining < 0) {
+			throw new NotYourTurnError();
+		}
+
+		matchState[bankKey] = Math.max(0, Math.floor(remaining));
+	}
+
+	/**
+	 * Create a SKIPPED slot for the current draft step and zero-out the side's bank.
+	 */
+	private async skipTurnSlot(
+		matchState: MatchStateEntity,
+		matchSessionId: number,
+	) {
+		const action = DRAFT_SEQUENCE[matchState.draftStep];
+		if (!action) {
+			return;
+		}
+
+		const normalizedSide = this.normalizePlayerSide(action.side);
+		const slotType = action.type === "ban" ? "BAN" : "PICK";
+
+		const [lastSlot, sideSlotsCount] = await Promise.all([
+			this.banPickSlotRepo.findOne({
+				where: { matchSessionId },
+				order: { turnIndex: "DESC" },
+				select: { turnIndex: true },
+			}),
+			this.banPickSlotRepo.count({
+				where: {
+					matchSessionId,
+					matchSide: normalizedSide,
+				},
+			}),
+		]);
+
+		await this.banPickSlotRepo.insert({
+			matchSessionId,
+			turnIndex: (lastSlot?.turnIndex ?? -1) + 1,
+			teamOrder: sideSlotsCount + 1,
+			slotType,
+			matchSide: normalizedSide,
+			slotStatus: "SKIPPED",
+			characterId: null,
+			selectedByAccountId: null,
+			lockedAt: new Date(),
+		});
+
+		matchState.draftStep += 1;
+	}
+
+	/**
+	 * After a normal action or timeout, update turnStartedAt for the next turn.
+	 */
+	async advanceTurn(matchState: MatchStateEntity) {
+		if (matchState.draftStep < DRAFT_SEQUENCE.length) {
+			matchState.turnStartedAt = new Date();
+		} else {
+			matchState.turnStartedAt = null;
+		}
+
+		await this.matchStateRepo.save(matchState);
+	}
+
+	/**
+	 * Called by DraftTimerService when a turn times out.
+	 * Skips the current turn and cascades, then broadcasts.
+	 */
+	@Transactional()
+	async handleTurnTimeout(matchId: string, expectedDraftStep: number) {
+		const match = await this.matchRepo.findOne({
+			where: { id: matchId },
+			relations: { host: true, redPlayer: true, bluePlayer: true },
+		});
+		if (!match || match.status !== MatchStatus.LIVE) {
+			return;
+		}
+
+		const matchState = await this.matchStateRepo.findOneOrCreate(matchId);
+
+		// Guard: if the draft already advanced past the expected step, ignore this timeout
+		if (matchState.draftStep !== expectedDraftStep) {
+			return;
+		}
+
+		if (matchState.draftStep >= DRAFT_SEQUENCE.length) {
+			return;
+		}
+
+		const matchSession = await this.getCurrentMatchSession(match, matchState);
+
+		// Skip only the timed-out turn
+		await this.skipTurnSlot(matchState, matchSession.id);
+
+		await this.advanceTurn(matchState);
 		await this.saveAndBroadcastMatchState(matchId, match);
 	}
 
@@ -853,6 +1023,8 @@ export class MatchService {
 			throw new MatchAlreadyCompletedError();
 		}
 
+		this.draftTimerService.cancel(matchId);
+
 		const matchState = await this.matchStateRepo.findOneOrCreate(matchId);
 		const currentSession = await this.getCurrentMatchSession(match, matchState);
 
@@ -938,7 +1110,7 @@ export class MatchService {
 				nextSession.sessionStatus = MatchSessionStatus.LIVE;
 				await this.matchSessionRepo.save(nextSession);
 
-				// Re-assign matchState to new session, empty out slots
+				// Re-assign matchState to new session, empty out slots, reset timer
 				await this.matchStateRepo.update(
 					{ matchId },
 					{
@@ -950,6 +1122,10 @@ export class MatchService {
 						redBanChars: [],
 						redSelectedChars: [],
 						redSelectedWeapons: [],
+						blueTimeBank: TIME_BANK_SECONDS,
+						redTimeBank: TIME_BANK_SECONDS,
+						turnStartedAt: new Date(),
+						draftStep: 0,
 					},
 				);
 
@@ -972,6 +1148,11 @@ export class MatchService {
 		this.socketMatchService.emitToMatch(matchId, SocketEvents.MATCH_UPDATED, {
 			...updatedMatch,
 		});
+
+		// Schedule timer for next session if match is still live
+		if (updatedMatch.status === MatchStatus.LIVE) {
+			await this.draftTimerService.scheduleFromMatchState(matchId);
+		}
 	}
 
 	private calculateSessionResultTotal(

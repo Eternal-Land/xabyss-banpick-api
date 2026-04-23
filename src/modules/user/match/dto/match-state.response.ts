@@ -16,6 +16,10 @@ export class MatchStateResponse {
 	redSelectedChars: string[];
 	redSelectedWeapons: string[];
 	redSelectedWeaponRefinements: number[];
+	blueTimeBank: number;
+	redTimeBank: number;
+	turnStartedAt: Date | null;
+	draftStep: number;
 	updatedAt: Date;
 
 	static fromEntity(entity: MatchStateEntity): MatchStateResponse {
@@ -42,6 +46,10 @@ export class MatchStateResponse {
 			.redSelectedWeaponRefinements(
 				matchState.redSelectedWeaponRefinements ?? [],
 			)
+			.blueTimeBank(entity.blueTimeBank)
+			.redTimeBank(entity.redTimeBank)
+			.turnStartedAt(entity.turnStartedAt)
+			.draftStep(entity.draftStep)
 			.updatedAt(entity.updatedAt)
 			.build();
 	}
