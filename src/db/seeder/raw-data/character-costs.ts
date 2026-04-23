@@ -6,11 +6,11 @@ export const characterCostsRawData = [
 	},
 	{
 		key: "mavuika",
-		costs: [1, 1.5, 3, 4, 4.5, 5, 8],
+		costs: [2.5, 3.5, 4.5, 5, 5.5, 6, 8],
 	},
 	{
 		key: "arlecchino",
-		costs: [0.5, 1, 2, 3, 3.5, 4, 6],
+		costs: [0.5, 1.5, 2, 3, 3.5, 3.5, 6],
 	},
 	{
 		key: "lyney",
@@ -22,7 +22,7 @@ export const characterCostsRawData = [
 	},
 	{
 		key: "hutao",
-		costs: [0, 0.5, 0.5, 0.5, 0.5, 0.5, 1],
+		costs: [0, 0, 0, 0, 0, 0, 0],
 	},
 	{
 		key: "klee",
@@ -33,6 +33,18 @@ export const characterCostsRawData = [
 		costs: [0, 0, 0, 0, 0, 0, 0.5],
 	},
 	{
+		key: "amber",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "bennett",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "yun_jin",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
 		key: "diluc",
 		costs: [0, 0, 0, 0, 0, 0, 0],
 	},
@@ -40,23 +52,39 @@ export const characterCostsRawData = [
 		key: "dehya",
 		costs: [0, 0, 0, 0, 0, 0, 0],
 	},
+	{
+		key: "gaming",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
 
 	//DENDRO characters
 	{
 		key: "nefer",
-		costs: [3, 4, 5, 6, 7, 8, 9],
+		costs: [1, 2, 3, 3.5, 4, 4.5, 8],
 	},
 	{
 		key: "lauma",
-		costs: [1, 1.5, 2.5, 3, 3, 3.5, 9],
+		costs: [1, 1.5, 2, 3, 3, 3.5, 7],
 	},
 	{
 		key: "kinich",
-		costs: [0.5, 1, 2, 2.5, 3, 3.5, 5],
+		costs: [2, 3, 4, 4.5, 5, 5, 7],
+	},
+	{
+		key: "kaveh",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "kirara",
+		costs: [0, 0, 0, 0, 0, 0, 0],
 	},
 	{
 		key: "emilie",
-		costs: [0.5, 0.5, 1, 1, 1, 1, 4],
+		costs: [1.5, 2, 3, 3.5, 4, 4.5, 5],
+	},
+	{
+		key: "collei",
+		costs: [0, 0, 0, 0, 0, 0, 0],
 	},
 	{
 		key: "baizhu",
@@ -65,6 +93,10 @@ export const characterCostsRawData = [
 	{
 		key: "nahida",
 		costs: [0, 0, 0.5, 0.5, 0.5, 0.5, 1],
+	},
+	{
+		key: "layla",
+		costs: [0, 0, 0, 0, 0, 0, 0],
 	},
 	{
 		key: "alhaitham",
@@ -86,7 +118,7 @@ export const characterCostsRawData = [
 	},
 	{
 		key: "citlali",
-		costs: [1, 1.5, 2, 2, 2, 2, 4],
+		costs: [1, 1.5, 2, 2, 2, 2, 5],
 	},
 	{
 		key: "wriothesley",
@@ -98,37 +130,69 @@ export const characterCostsRawData = [
 	},
 	{
 		key: "kamisato_ayaka",
-		costs: [0.5, 0.5, 1, 1, 1.5, 1.5, 2],
+		costs: [0.5, 0.5, 0.5, 0.5, 1, 1, 2],
 	},
 	{
 		key: "eula",
-		costs: [0, 0, 0.5, 0.5, 0.5, 0.5, 1],
+		costs: [0, 0, 0, 0, 0, 0, 0],
 	},
 	{
 		key: "ganyu",
-		costs: [0, 0.5, 0.5, 0.5, 0.5, 0.5, 1],
+		costs: [0, 0, 0, 0, 0, 0, 0.5],
 	},
 	{
 		key: "qiqi",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "rosaria",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "aloy",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "charlotte",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "chongyun",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "diona",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "mika",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "kaeya",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "freminet",
 		costs: [0, 0, 0, 0, 0, 0, 0],
 	},
 
 	// ELECTRO characters
 	{
 		key: "flins",
-		costs: [3, 4, 5, 6, 6.5, 7, 10],
+		costs: [1, 2, 3, 4, 4.5, 4.5, 8],
 	},
 	{
 		key: "ineffa",
-		costs: [2, 3, 4, 4.5, 5, 6, 8],
+		costs: [1.5, 2.5, 3, 3.5, 4, 4, 7],
 	},
 	{
 		key: "varesa",
-		costs: [1, 1.5, 2.5, 4, 5, 6, 7],
+		costs: [1.5, 2, 3, 4, 4.5, 5, 7],
 	},
 	{
 		key: "clorinde",
-		costs: [0.5, 1, 2, 3, 3.5, 4, 6],
+		costs: [0, 0.5, 1.5, 2, 2.5, 3, 6],
 	},
 	{
 		key: "raiden_shogun",
@@ -136,7 +200,11 @@ export const characterCostsRawData = [
 	},
 	{
 		key: "cyno",
-		costs: [0, 0, 0.5, 0.5, 0.5, 0.5, 1],
+		costs: [0, 0, 0, 0, 0, 0, 1],
+	},
+	{
+		key: "thoma",
+		costs: [0, 0, 0, 0, 0, 0, 0],
 	},
 	{
 		key: "iansan",
@@ -150,11 +218,47 @@ export const characterCostsRawData = [
 		key: "keqing",
 		costs: [0, 0, 0, 0, 0, 0, 0],
 	},
+	{
+		key: "lisa",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "beidou",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "kujou_sara",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "razor",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "sethos",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "ororon",
+		costs: [0, 0, 0, 0, 0, 0, 0.5],
+	},
+	{
+		key: "fischl",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "dori",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "aino",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
 
 	// ANEMO characters
 	{
 		key: "chasca",
-		costs: [0.5, 1, 2.5, 3, 3.5, 4, 6],
+		costs: [1.5, 2.5, 3.5, 4.5, 5, 5.5, 8],
 	},
 	{
 		key: "xianyun",
@@ -165,12 +269,28 @@ export const characterCostsRawData = [
 		costs: [0, 0, 0, 0, 0, 0, 0],
 	},
 	{
+		key: "xiangling",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "xinyan",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "sayu",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "sucrose",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
 		key: "venti",
-		costs: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 2],
+		costs: [1, 1, 1, 1, 1, 1, 3],
 	},
 	{
 		key: "wanderer",
-		costs: [0.5, 0.5, 1, 1, 1, 1, 2],
+		costs: [0, 0, 0.5, 0.5, 0.5, 0.5, 1],
 	},
 	{
 		key: "kaedehara_kazuha",
@@ -185,8 +305,28 @@ export const characterCostsRawData = [
 		costs: [0, 0, 0, 0, 0, 0, 0],
 	},
 	{
+		key: "lynette",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "lan_yan",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "faruzan",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "ifa",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "jahoda",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
 		key: "varka",
-		costs: [0, 0.5, 1, 1.5, 2, 2, 3.5],
+		costs: [1, 1.5, 2, 3, 3.5, 4, 5],
 	},
 
 	// GEO characters
@@ -196,7 +336,7 @@ export const characterCostsRawData = [
 	},
 	{
 		key: "chiori",
-		costs: [0.5, 1, 1, 1.5, 1.5, 1.5, 6],
+		costs: [1, 1.5, 5, 2.5, 3, 3.5, 7],
 	},
 	{
 		key: "zhongli",
@@ -211,12 +351,40 @@ export const characterCostsRawData = [
 		costs: [0.5, 0.5, 1, 2, 2, 2, 3],
 	},
 	{
+		key: "linnae",
+		costs: [1, 1.5, 3, 3.5, 4, 4.5, 7],
+	},
+	{
+		key: "shikanoin_heizou",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
 		key: "ataraki_itto",
 		costs: [0, 0, 0, 0, 0, 0, 1],
 	},
 	{
+		key: "ningguang",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "noelle",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "kachina",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
 		key: "zibai",
-		costs: [4, 5, 5.5, 6, 6.5, 7, 9],
+		costs: [3.5, 4.5, 5.5, 6, 6.5, 7, 9],
+	},
+	{
+		key: "gorou",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "illuga",
+		costs: [0, 0, 0, 0, 0, 0, 0],
 	},
 
 	// HYDRO characters
@@ -225,12 +393,16 @@ export const characterCostsRawData = [
 		costs: [0, 0, 0.5, 0.5, 0.5, 0.5, 2],
 	},
 	{
+		key: "barbara",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
 		key: "furina",
-		costs: [0.5, 1, 2, 2.5, 3, 3.5, 5],
+		costs: [0.5, 1, 1.5, 2, 2.5, 3, 4],
 	},
 	{
 		key: "mualani",
-		costs: [0.5, 1, 3, 3.5, 4, 4.5, 6],
+		costs: [0.5, 2, 4, 5, 5.5, 6, 7],
 	},
 	{
 		key: "neuvillette",
@@ -242,11 +414,11 @@ export const characterCostsRawData = [
 	},
 	{
 		key: "yelan",
-		costs: [0, 0, 1, 1, 1, 1, 3],
+		costs: [0, 0.5, 1, 1, 1, 1, 3],
 	},
 	{
 		key: "kamisato_ayato",
-		costs: [0, 0, 0.5, 1, 1, 1, 2],
+		costs: [0, 0, 0, 0, 0, 0, 1],
 	},
 	{
 		key: "sangonomiya_kokomi",
@@ -258,10 +430,18 @@ export const characterCostsRawData = [
 	},
 	{
 		key: "mona",
-		costs: [0, 0, 0, 0, 0.5, 0.5, 0.5],
+		costs: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
+	},
+	{
+		key: "dahlia",
+		costs: [0, 0, 0, 0, 0, 0, 0],
+	},
+	{
+		key: "candace",
+		costs: [0, 0, 0, 0, 0, 0, 0],
 	},
 	{
 		key: "columbina",
-		costs: [2, 2.5, 4, 4.5, 5, 6.5, 9],
+		costs: [1, 1, 3, 3.5, 4, 4.5, 8],
 	},
 ];
