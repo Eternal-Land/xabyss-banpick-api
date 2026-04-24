@@ -38,8 +38,10 @@ import {
 	NotYourTurnError,
 	ParticipantNotFoundError,
 	SessionCompletionValidationError,
+	SupachaiLimitReachedError,
 	WeaponPickRequiresSelectedCharacterError,
 } from "./errors";
+import { SupachaiPickSlotNotFoundError } from "./errors/supachai-pick-slot-not-found.error";
 import { DraftTimerService } from "./draft-timer.service";
 import { SocketMatchService } from "@modules/socket/services";
 import { SocketEvents } from "@utils/constants";
@@ -48,6 +50,7 @@ import { UserSessionCostService } from "../session-cost";
 
 export const TURN_DURATION_SECONDS = 20;
 export const TIME_BANK_SECONDS = 120;
+export const BO5_SESSION_COUNT = 5;
 
 interface DraftAction {
 	side: PlayerSide;
@@ -127,6 +130,11 @@ export class MatchService {
 			where: { matchId },
 		});
 
+		const match = await this.matchRepo.findOne({ where: { id: matchId } });
+		if (!match) {
+			throw new MatchNotFoundError();
+		}
+
 		const existedSessions = await this.matchSessionRepo.find({
 			where: { matchId, isDeleted: false },
 			select: { id: true },
@@ -154,12 +162,10 @@ export class MatchService {
 			redTimeBank: TIME_BANK_SECONDS,
 			turnStartedAt: null,
 			draftStep: 0,
+			blueSupachaiUsedCount: 0,
+			redSupachaiUsedCount: 0,
+			supachaiMaxUses: this.getSupachaiMaxUses(match.sessionCount),
 		});
-
-		const match = await this.matchRepo.findOne({ where: { id: matchId } });
-		if (!match) {
-			throw new MatchNotFoundError();
-		}
 		const sessions = await this.ensureMatchSessions(match);
 		const firstSession = sessions[0];
 		if (firstSession) {
@@ -303,6 +309,11 @@ export class MatchService {
 		match: MatchEntity,
 		matchState: MatchStateEntity,
 	) {
+		const expectedSupachaiMaxUses = this.getSupachaiMaxUses(match.sessionCount);
+		if (matchState.supachaiMaxUses !== expectedSupachaiMaxUses) {
+			matchState.supachaiMaxUses = expectedSupachaiMaxUses;
+		}
+
 		const currentSession = await this.getCurrentMatchSession(match, matchState);
 
 		// Fetch ALL slots (LOCKED + SKIPPED) for total draftStep count
@@ -340,6 +351,10 @@ export class MatchService {
 		}
 
 		return await this.matchStateRepo.save(matchState);
+	}
+
+	private getSupachaiMaxUses(sessionCount: number) {
+		return sessionCount === BO5_SESSION_COUNT ? 2 : 1;
 	}
 
 	async findMany(query: MatchQuery) {
@@ -1016,6 +1031,105 @@ export class MatchService {
 	}
 
 	@Transactional()
+	async activateSupachai(
+		matchId: string,
+		fromCharId: number,
+		toCharId: number,
+	) {
+		if (fromCharId === toCharId) {
+			throw new BadRequestException(
+				"Supachai requires a different replacement character",
+			);
+		}
+
+		const playerId = this.cls.get("profile.id");
+		const match = await this.findOne(matchId);
+		if ([MatchStatus.COMPLETED, MatchStatus.CANCELLED].includes(match.status)) {
+			throw new MatchAlreadyCompletedError();
+		}
+
+		const matchState = await this.matchStateRepo.findOneOrCreate(matchId);
+		const matchSession = await this.getCurrentMatchSession(match, matchState);
+		const playerSide = this.getPlayerSide(match, playerId);
+		if (playerSide === null) {
+			throw new MatchNotFoundError();
+		}
+
+		const normalizedSide = this.normalizePlayerSide(playerSide);
+		const sidePickSlots = await this.banPickSlotRepo.find({
+			where: {
+				matchSessionId: matchSession.id,
+				matchSide: normalizedSide,
+				slotType: "PICK",
+				slotStatus: "LOCKED",
+			},
+			order: { teamOrder: "ASC" },
+		});
+
+		if (sidePickSlots.length < 8) {
+			throw new BadRequestException(
+				"Supachai can only be used after all 8 pick slots are locked",
+			);
+		}
+
+		const supachaiUsedKey =
+			playerSide === PlayerSide.BLUE
+				? "blueSupachaiUsedCount"
+				: "redSupachaiUsedCount";
+
+		if (matchState[supachaiUsedKey] >= matchState.supachaiMaxUses) {
+			throw new SupachaiLimitReachedError();
+		}
+
+		const selectedPickSlot = sidePickSlots.find(
+			(slot) => slot.characterId === fromCharId,
+		);
+		if (!selectedPickSlot) {
+			throw new SupachaiPickSlotNotFoundError();
+		}
+
+		const selectedAccountCharacter = await this.accountCharacterRepo.findOne({
+			where: {
+				characterId: toCharId,
+				accountId: playerId,
+			},
+		});
+
+		if (!selectedAccountCharacter) {
+			throw new AccountCharacterNotFoundError();
+		}
+
+		await this.ensureCharacterNotUsedInSession(matchSession.id, toCharId);
+
+		selectedPickSlot.characterId = toCharId;
+		selectedPickSlot.weaponId = null;
+		selectedPickSlot.weaponRefinement = null;
+		selectedPickSlot.weaponSelectedAt = null;
+		await this.banPickSlotRepo.save(selectedPickSlot);
+
+		matchState[supachaiUsedKey] += 1;
+		await this.matchStateRepo.save(matchState);
+
+		try {
+			await this.userSessionCostService.calculate(matchSession.id, {
+				side: playerSide,
+			});
+		} catch {
+			// Keep Supachai swap successful even if cost recalculation fails.
+		}
+
+		const savedMatchState = await this.saveAndBroadcastMatchState(
+			matchId,
+			match,
+		);
+		this.socketMatchService.emitToMatch(
+			matchId,
+			SocketEvents.UPDATE_MATCH_SESSION,
+			{ matchSessionId: savedMatchState.currentSession },
+		);
+	}
+
+	@Transactional()
 	async completeCurrentSession(matchId: string) {
 		const hostId = this.cls.get("profile.id");
 		const match = await this.findOne(matchId, { isHost: true });
@@ -1126,6 +1240,8 @@ export class MatchService {
 						redTimeBank: TIME_BANK_SECONDS,
 						turnStartedAt: new Date(),
 						draftStep: 0,
+						blueSupachaiUsedCount: matchState.redSupachaiUsedCount,
+						redSupachaiUsedCount: matchState.blueSupachaiUsedCount,
 					},
 				);
 

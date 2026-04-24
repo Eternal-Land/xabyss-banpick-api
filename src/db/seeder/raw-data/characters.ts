@@ -196,7 +196,7 @@ export const rawChars: DeepPartial<CharacterEntity>[] = [
 		key: "furina",
 		name: "Furina",
 		iconUrl:
-			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868833/Flins_tjjtaq.png",
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1776868834/Furina_a1kp3e.png",
 		rarity: 5,
 		element: CharacterElement.HYDRO,
 		weaponType: WeaponType.SWORD,

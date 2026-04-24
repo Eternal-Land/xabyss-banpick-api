@@ -104,6 +104,27 @@ export class MatchStateEntity {
 	})
 	draftStep: number;
 
+	@Column({
+		name: ColumnNames.MatchState.blueSupachaiUsedCount,
+		type: "int",
+		default: 0,
+	})
+	blueSupachaiUsedCount: number;
+
+	@Column({
+		name: ColumnNames.MatchState.redSupachaiUsedCount,
+		type: "int",
+		default: 0,
+	})
+	redSupachaiUsedCount: number;
+
+	@Column({
+		name: ColumnNames.MatchState.supachaiMaxUses,
+		type: "int",
+		default: 1,
+	})
+	supachaiMaxUses: number;
+
 	@UpdateDateColumn({ name: ColumnNames.Global.updatedAt, type: "datetime" })
 	updatedAt: Date;
 }

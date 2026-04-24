@@ -126,4 +126,16 @@ export class MatchController {
 		await this.matchService.pickWeapon(id, charId, weaponId, weaponRefinement);
 		return BaseApiResponse.success();
 	}
+
+	@Put(":id/activate-supachai/:fromCharId/:toCharId")
+	@SwaggerBaseApiMessageResponse()
+	@ApiBearerAuth()
+	async activateSupachai(
+		@Param("id", ParseUUIDPipe) id: string,
+		@Param("fromCharId", ParseIntPipe) fromCharId: number,
+		@Param("toCharId", ParseIntPipe) toCharId: number,
+	) {
+		await this.matchService.activateSupachai(id, fromCharId, toCharId);
+		return BaseApiResponse.success();
+	}
 }

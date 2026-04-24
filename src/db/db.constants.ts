@@ -147,6 +147,9 @@ export const ColumnNames = {
 		redTimeBank: "red_time_bank",
 		turnStartedAt: "turn_started_at",
 		draftStep: "draft_step",
+		blueSupachaiUsedCount: "blue_supachai_used_count",
+		redSupachaiUsedCount: "red_supachai_used_count",
+		supachaiMaxUses: "supachai_max_uses",
 	},
 	BanPickSlot: {
 		id: "ban_pick_slot_id",
