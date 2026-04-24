@@ -76,6 +76,34 @@ export class MatchStateEntity {
 	})
 	redSelectedWeapons: string[];
 
+	@Column({
+		name: ColumnNames.MatchState.blueTimeBank,
+		type: "int",
+		default: 120,
+	})
+	blueTimeBank: number;
+
+	@Column({
+		name: ColumnNames.MatchState.redTimeBank,
+		type: "int",
+		default: 120,
+	})
+	redTimeBank: number;
+
+	@Column({
+		name: ColumnNames.MatchState.turnStartedAt,
+		type: "datetime",
+		nullable: true,
+	})
+	turnStartedAt: Date | null;
+
+	@Column({
+		name: ColumnNames.MatchState.draftStep,
+		type: "int",
+		default: 0,
+	})
+	draftStep: number;
+
 	@UpdateDateColumn({ name: ColumnNames.Global.updatedAt, type: "datetime" })
 	updatedAt: Date;
 }
