@@ -20,6 +20,9 @@ export class MatchStateResponse {
 	redTimeBank: number;
 	turnStartedAt: Date | null;
 	draftStep: number;
+	blueSupachaiUsedCount: number;
+	redSupachaiUsedCount: number;
+	supachaiMaxUses: number;
 	updatedAt: Date;
 
 	static fromEntity(entity: MatchStateEntity): MatchStateResponse {
@@ -50,6 +53,9 @@ export class MatchStateResponse {
 			.redTimeBank(entity.redTimeBank)
 			.turnStartedAt(entity.turnStartedAt)
 			.draftStep(entity.draftStep)
+			.blueSupachaiUsedCount(entity.blueSupachaiUsedCount)
+			.redSupachaiUsedCount(entity.redSupachaiUsedCount)
+			.supachaiMaxUses(entity.supachaiMaxUses)
 			.updatedAt(entity.updatedAt)
 			.build();
 	}
