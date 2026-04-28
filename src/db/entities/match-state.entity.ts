@@ -105,6 +105,20 @@ export class MatchStateEntity {
 	draftStep: number;
 
 	@Column({
+		name: "is_paused",
+		type: "boolean",
+		default: false,
+	})
+	isPaused: boolean;
+
+	@Column({
+		name: "paused_elapsed_ms",
+		type: "int",
+		nullable: true,
+	})
+	pausedElapsedMs: number | null;
+
+	@Column({
 		name: ColumnNames.MatchState.blueSupachaiUsedCount,
 		type: "int",
 		default: 0,

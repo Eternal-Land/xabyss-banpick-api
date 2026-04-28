@@ -75,6 +75,39 @@ export class DraftTimerService implements OnModuleDestroy {
 		}
 	}
 
+	async pause(matchId: string) {
+		this.cancel(matchId);
+		const matchState = await this.matchStateRepo.findOne({
+			where: { matchId },
+		});
+		if (!matchState || matchState.isPaused || !matchState.turnStartedAt) {
+			return;
+		}
+
+		const elapsed = Date.now() - matchState.turnStartedAt.getTime();
+		matchState.isPaused = true;
+		matchState.pausedElapsedMs = elapsed;
+		matchState.turnStartedAt = null;
+		await this.matchStateRepo.save(matchState);
+	}
+
+	async resume(matchId: string) {
+		const matchState = await this.matchStateRepo.findOne({
+			where: { matchId },
+		});
+		if (!matchState || !matchState.isPaused) {
+			return;
+		}
+
+		const elapsed = matchState.pausedElapsedMs ?? 0;
+		matchState.isPaused = false;
+		matchState.pausedElapsedMs = null;
+		matchState.turnStartedAt = new Date(Date.now() - elapsed);
+		await this.matchStateRepo.save(matchState);
+
+		await this.scheduleFromMatchState(matchId);
+	}
+
 	private async handleTimeout(matchId: string, expectedDraftStep: number) {
 		if (!this.onTurnTimeout) {
 			return;

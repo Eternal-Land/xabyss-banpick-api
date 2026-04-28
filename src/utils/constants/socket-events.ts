@@ -11,4 +11,7 @@ export const SocketEvents = {
 	MATCH_STARTED: "match_started",
 	MATCH_COMPLETED: "match_completed",
 	MATCH_UPDATED: "match_updated",
+	PAUSE_MATCH: "pause_match",
+	RESUME_MATCH: "resume_match",
+	UNDO_DRAFT_ACTION: "undo_draft_action",
 } as const;

@@ -12,3 +12,4 @@ export * from "./weapon-already-selected-for-side.error";
 export * from "./session-completion-validation.error";
 export * from "./supachai-limit-reached.error";
 export * from "./supachai-pick-slot-not-found.error";
+export * from "./traveller-already-picked.error";

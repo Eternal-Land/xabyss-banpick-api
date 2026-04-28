@@ -1,6 +1,7 @@
 import {
 	AccountCharacterRepository,
 	BanPickSlotRepository,
+	CharacterRepository,
 	MatchRepository,
 	MatchSessionRepository,
 	MatchStateRepository,
@@ -40,6 +41,7 @@ import {
 	SessionCompletionValidationError,
 	SupachaiLimitReachedError,
 	WeaponPickRequiresSelectedCharacterError,
+	TravellerAlreadyPickedError,
 } from "./errors";
 import { SupachaiPickSlotNotFoundError } from "./errors/supachai-pick-slot-not-found.error";
 import { DraftTimerService } from "./draft-timer.service";
@@ -59,8 +61,8 @@ interface DraftAction {
 
 export const DRAFT_SEQUENCE: DraftAction[] = [
 	{ side: PlayerSide.BLUE, type: "ban" },
-	{ side: PlayerSide.RED, type: "ban" },
 	{ side: PlayerSide.BLUE, type: "ban" },
+	{ side: PlayerSide.RED, type: "ban" },
 	{ side: PlayerSide.RED, type: "ban" },
 	{ side: PlayerSide.BLUE, type: "pick" },
 	{ side: PlayerSide.RED, type: "pick" },
@@ -98,6 +100,7 @@ export class MatchService {
 		private readonly matchSessionRepo: MatchSessionRepository,
 		private readonly banPickSlotRepo: BanPickSlotRepository,
 		private readonly accountCharacterRepo: AccountCharacterRepository,
+		private readonly characterRepo: CharacterRepository,
 		private readonly weaponRepo: WeaponRepository,
 		private readonly sessionRecordRepo: SessionRecordRepository,
 		private readonly sessionCostRepo: SessionCostRepository,
@@ -454,6 +457,57 @@ export class MatchService {
 		return matchState;
 	}
 
+	async pauseMatch(matchId: string, hostId: string) {
+		const match = await this.findOne(matchId, { isHost: true });
+		if (match.status !== MatchStatus.LIVE) {
+			throw new BadRequestException("Match is not live");
+		}
+
+		await this.draftTimerService.pause(matchId);
+		await this.saveAndBroadcastMatchState(matchId, match);
+	}
+
+	async resumeMatch(matchId: string, hostId: string) {
+		const match = await this.findOne(matchId, { isHost: true });
+		if (match.status !== MatchStatus.LIVE) {
+			throw new BadRequestException("Match is not live");
+		}
+
+		await this.draftTimerService.resume(matchId);
+		await this.saveAndBroadcastMatchState(matchId, match);
+	}
+
+	@Transactional()
+	async undoLastAction(matchId: string, hostId: string) {
+		const match = await this.findOne(matchId, { isHost: true });
+		if (match.status !== MatchStatus.LIVE) {
+			throw new BadRequestException("Match is not live");
+		}
+
+		const matchState = await this.matchStateRepo.findOneOrCreate(matchId);
+		const currentSession = await this.getCurrentMatchSession(match, matchState);
+
+		const lastSlot = await this.banPickSlotRepo.findOne({
+			where: {
+				matchSessionId: currentSession.id,
+				slotStatus: In(["LOCKED", "SKIPPED"]),
+			},
+			order: { turnIndex: "DESC" },
+		});
+
+		if (!lastSlot) {
+			throw new BadRequestException("No actions to undo");
+		}
+
+		await this.banPickSlotRepo.delete({ id: lastSlot.id });
+
+		matchState.turnStartedAt = new Date();
+		await this.matchStateRepo.save(matchState);
+
+		await this.saveAndBroadcastMatchState(matchId, match);
+		await this.draftTimerService.scheduleFromMatchState(matchId);
+	}
+
 	private getPlayerSide(match: MatchEntity, playerId: string) {
 		if (playerId === match.bluePlayerId) {
 			return PlayerSide.BLUE;
@@ -490,6 +544,72 @@ export class MatchService {
 		if (existed) {
 			throw new CharacterAlreadyUsedError();
 		}
+	}
+
+	private async ensureTravellerNotPickedForSide(
+		matchSessionId: number,
+		playerSide: PlayerSide,
+	) {
+		const sideString = playerSide === PlayerSide.BLUE ? "BLUE" : "RED";
+		const existingPick = await this.banPickSlotRepo.findOne({
+			where: {
+				matchSessionId,
+				matchSide: sideString,
+				slotType: "PICK",
+				slotStatus: "LOCKED",
+			},
+			relations: ["character"],
+		});
+
+		if (existingPick?.character) {
+			const charKey = existingPick.character.key.toLowerCase();
+			if (charKey.startsWith("traveller")) {
+				throw new TravellerAlreadyPickedError();
+			}
+		}
+	}
+
+	private async autoBanOtherTravellers(
+		matchSessionId: number,
+		playerSide: PlayerSide,
+		pickedCharId: number,
+		matchState: MatchStateEntity,
+	) {
+		// Find all traveller characters except the one that was picked
+		const travellerChars = await this.characterRepo.find({
+			where: {
+				key: In([
+					"traveller",
+					"traveller_geo",
+					"traveller_anemo",
+					"traveller_electro",
+					"traveller_dendro",
+					"traveller_hydro",
+				]),
+				isActive: true,
+			},
+		});
+
+		const otherTravellers = travellerChars.filter((c) => c.id !== pickedCharId);
+
+		if (otherTravellers.length === 0) {
+			return;
+		}
+
+		const otherTravellerIds = otherTravellers.map((c) => String(c.id));
+
+		// Add to the appropriate ban array in match state
+		if (playerSide === PlayerSide.BLUE) {
+			const existingBans = new Set(matchState.blueBanChars);
+			otherTravellerIds.forEach((id) => existingBans.add(id));
+			matchState.blueBanChars = Array.from(existingBans);
+		} else {
+			const existingBans = new Set(matchState.redBanChars);
+			otherTravellerIds.forEach((id) => existingBans.add(id));
+			matchState.redBanChars = Array.from(existingBans);
+		}
+
+		await this.matchStateRepo.save(matchState);
 	}
 
 	private validateSlotAgainstExpectedDraftAction(
@@ -748,6 +868,16 @@ export class MatchService {
 
 		if (!selectedAccountCharacter) {
 			throw new AccountCharacterNotFoundError();
+		}
+
+		const character = await this.characterRepo.findOneBy({ id: charId });
+		if (character?.key.toLowerCase().startsWith("traveller")) {
+			await this.autoBanOtherTravellers(
+				matchSession.id,
+				playerSide,
+				charId,
+				matchState,
+			);
 		}
 
 		await this.ensureCharacterNotUsedInSession(matchSession.id, charId);

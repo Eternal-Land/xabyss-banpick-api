@@ -19,6 +19,8 @@ export class MatchStateResponse {
 	blueTimeBank: number;
 	redTimeBank: number;
 	turnStartedAt: Date | null;
+	isPaused: boolean;
+	pausedElapsedMs: number | null;
 	draftStep: number;
 	blueSupachaiUsedCount: number;
 	redSupachaiUsedCount: number;
@@ -52,6 +54,8 @@ export class MatchStateResponse {
 			.blueTimeBank(entity.blueTimeBank)
 			.redTimeBank(entity.redTimeBank)
 			.turnStartedAt(entity.turnStartedAt)
+			.isPaused(entity.isPaused)
+			.pausedElapsedMs(entity.pausedElapsedMs)
 			.draftStep(entity.draftStep)
 			.blueSupachaiUsedCount(entity.blueSupachaiUsedCount)
 			.redSupachaiUsedCount(entity.redSupachaiUsedCount)

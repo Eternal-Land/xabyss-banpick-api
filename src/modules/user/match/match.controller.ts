@@ -138,4 +138,31 @@ export class MatchController {
 		await this.matchService.activateSupachai(id, fromCharId, toCharId);
 		return BaseApiResponse.success();
 	}
+
+	@Put(":id/pause")
+	@SwaggerBaseApiMessageResponse()
+	@ApiBearerAuth()
+	async pauseMatch(@Param("id", ParseUUIDPipe) id: string) {
+		const hostId = this.matchService["cls"].get("profile.id");
+		await this.matchService.pauseMatch(id, hostId);
+		return BaseApiResponse.success();
+	}
+
+	@Put(":id/resume")
+	@SwaggerBaseApiMessageResponse()
+	@ApiBearerAuth()
+	async resumeMatch(@Param("id", ParseUUIDPipe) id: string) {
+		const hostId = this.matchService["cls"].get("profile.id");
+		await this.matchService.resumeMatch(id, hostId);
+		return BaseApiResponse.success();
+	}
+
+	@Put(":id/undo")
+	@SwaggerBaseApiMessageResponse()
+	@ApiBearerAuth()
+	async undoLastAction(@Param("id", ParseUUIDPipe) id: string) {
+		const hostId = this.matchService["cls"].get("profile.id");
+		await this.matchService.undoLastAction(id, hostId);
+		return BaseApiResponse.success();
+	}
 }
