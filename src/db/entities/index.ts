@@ -9,6 +9,7 @@ export * from "./character-cost.entity";
 export * from "./cost-milestone.entity";
 export * from "./weapon-cost.entity";
 export * from "./character-level-cost.entity";
+export * from "./character-weapon.entity";
 export * from "./match.entity";
 export * from "./match-session.entity";
 export * from "./notification.entity";

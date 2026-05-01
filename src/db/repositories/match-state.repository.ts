@@ -20,6 +20,10 @@ export class MatchStateRepository extends Repository<MatchStateEntity> {
 					redBanChars: [],
 					redSelectedChars: [],
 					redSelectedWeapons: [],
+					blueSupachaiUsedSessionCount: 0,
+					redSupachaiUsedSessionCount: 0,
+					blueUsedChars: [],
+					redUsedChars: [],
 				});
 			} catch {
 				// Another concurrent request may have already created this row.

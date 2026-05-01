@@ -25,6 +25,12 @@ export const PERMISSIONS_MAP = {
 	"admin.weapon.update": "Update Weapon",
 	"admin.weapon.delete": "Delete Weapon",
 
+	"admin.character-weapon.list": "View Character Weapons List",
+	"admin.character-weapon.detail": "View Character Weapon Detail",
+	"admin.character-weapon.create": "Create Character Weapon",
+	"admin.character-weapon.update": "Update Character Weapon",
+	"admin.character-weapon.delete": "Delete Character Weapon",
+
 	"admin.users.list": "View Users List",
 	"admin.users.deactivate": "Deactivate User",
 	"admin.users.reactivate": "Reactivate User",

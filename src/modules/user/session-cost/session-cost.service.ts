@@ -4,15 +4,14 @@ import {
 	BanPickSlotRepository,
 	CharacterCostRepository,
 	CharacterLevelCostRepository,
+	CharacterWeaponRepository,
 	CostMilestoneRepository,
 	MatchStateRepository,
 	MatchSessionRepository,
 	SessionCostRepository,
-	WeaponCostRepository,
-	WeaponRepository,
 } from "@db/repositories";
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { PlayerSide, WeaponCostUnit } from "@utils/enums";
+import { PlayerSide } from "@utils/enums";
 import { SessionCostRequest } from "./dto";
 import { IsNull, LessThanOrEqual, MoreThanOrEqual } from "typeorm";
 import { SocketMatchService } from "@modules/socket/services";
@@ -20,9 +19,28 @@ import { SocketEvents } from "@utils/constants";
 
 @Injectable()
 export class UserSessionCostService {
+	private readonly firstSupachaiBonusSeconds = 30;
+	private readonly secondSupachaiBonusSeconds = 45;
+
 	private toNumber(value: unknown): number {
 		const numeric = Number(value);
 		return Number.isFinite(numeric) ? numeric : 0;
+	}
+
+	private getSupachaiFinalTimeBonus(
+		supachaiUsedCount: number,
+		supachaiUsedInCurrentSessionCount: number,
+		supachaiMaxUses: number,
+	) {
+		if (supachaiUsedInCurrentSessionCount <= 0) {
+			return 0;
+		}
+
+		if (supachaiMaxUses >= 2 && supachaiUsedCount >= 2) {
+			return this.secondSupachaiBonusSeconds;
+		}
+
+		return this.firstSupachaiBonusSeconds;
 	}
 
 	private normalizeSessionCost(sessionCost: SessionCostEntity) {
@@ -88,8 +106,7 @@ export class UserSessionCostService {
 		private readonly banPickSlotRepo: BanPickSlotRepository,
 		private readonly characterCostRepo: CharacterCostRepository,
 		private readonly accountCharacterRepo: AccountCharacterRepository,
-		private readonly weaponRepo: WeaponRepository,
-		private readonly weaponCostRepo: WeaponCostRepository,
+		private readonly characterWeaponRepo: CharacterWeaponRepository,
 		private readonly costMilestoneRepo: CostMilestoneRepository,
 		private readonly sessionCostRepo: SessionCostRepository,
 		private readonly characterLevelCostRepo: CharacterLevelCostRepository,
@@ -127,6 +144,17 @@ export class UserSessionCostService {
 		if (!matchSession) {
 			throw new NotFoundException("Match session not found");
 		}
+
+		const matchState = await this.matchStateRepo.findOne({
+			where: { matchId: matchSession.matchId },
+			select: {
+				blueSupachaiUsedCount: true,
+				redSupachaiUsedCount: true,
+				blueSupachaiUsedSessionCount: true,
+				redSupachaiUsedSessionCount: true,
+				supachaiMaxUses: true,
+			},
+		});
 
 		const sessionCost = await this.findOrCreateSessionCost(matchSessionId);
 
@@ -171,11 +199,8 @@ export class UserSessionCostService {
 		>();
 		const characterCostCache = new Map<string, number>();
 		const characterLevelCostCache = new Map<string, number>();
-		const weaponRarityCache = new Map<number, number | null>();
-		const weaponCostCache = new Map<
-			string,
-			{ totalCost: number; refinementCost: number }
-		>();
+		const characterWeaponSpecificCache = new Map<string, boolean>();
+		const characterWeaponGenericCache = new Map<number, boolean>();
 
 		for (const slot of [...slots].reverse()) {
 			const slotSide =
@@ -266,78 +291,108 @@ export class UserSessionCostService {
 				typeof slot.weaponRefinement === "number" &&
 				slot.weaponRefinement > 0
 			) {
-				let weaponRarity = weaponRarityCache.get(slot.weaponId);
-				if (weaponRarity === undefined) {
-					const weapon = await this.weaponRepo.findOne({
-						where: {
-							id: slot.weaponId,
-							isActive: true,
-						},
-						select: { rarity: true },
-					});
-					weaponRarity = weapon?.rarity ?? null;
-					weaponRarityCache.set(slot.weaponId, weaponRarity);
-				}
+				const refinementCost = (slot.weaponRefinement - 1) * 5;
+				let totalCost = 0.5;
+				let totalRefinementCost = refinementCost;
 
-				if (weaponRarity !== null && weaponRarity !== undefined) {
-					const weaponCostKey = `${weaponRarity}:${slot.weaponRefinement}`;
-					let cachedWeaponCost = weaponCostCache.get(weaponCostKey);
-					if (!cachedWeaponCost) {
-						const weaponCosts = await this.weaponCostRepo.find({
+				let hasSpecificCharacterWeapon = false;
+				if (slot.characterId && slot.selectedByAccountId) {
+					const characterStateKey = `${slot.selectedByAccountId}:${slot.characterId}`;
+					let characterState = characterStateCache.get(characterStateKey);
+					if (characterState === undefined) {
+						const accountCharacter = await this.accountCharacterRepo.findOne({
 							where: {
-								weaponRarity,
-								upgradeLevel: LessThanOrEqual(slot.weaponRefinement),
+								accountId: slot.selectedByAccountId,
+								characterId: slot.characterId,
 							},
 							select: {
-								value: true,
-								unit: true,
-								upgradeLevel: true,
+								activatedConstellation: true,
+								characterLevel: true,
 							},
 						});
 
-						const isAllCostUnit =
-							weaponCosts.length > 0 &&
-							weaponCosts.every(
-								(weaponCost) => weaponCost.unit === WeaponCostUnit.COST,
-							);
+						characterState = accountCharacter
+							? {
+									activatedConstellation:
+										accountCharacter.activatedConstellation,
+									characterLevel: accountCharacter.characterLevel,
+								}
+							: null;
+						characterStateCache.set(characterStateKey, characterState);
+					}
 
-						if (isAllCostUnit) {
-							const exactCost = weaponCosts.find(
-								(weaponCost) =>
-									weaponCost.unit === WeaponCostUnit.COST &&
-									weaponCost.upgradeLevel === slot.weaponRefinement,
-							);
+					if (characterState) {
+						const characterWeaponSpecificKey = `${slot.characterId}:${slot.weaponId}:${characterState.activatedConstellation}`;
+						const cachedSpecificCharacterWeapon =
+							characterWeaponSpecificCache.get(characterWeaponSpecificKey);
 
-							cachedWeaponCost = {
-								totalCost: this.toNumber(exactCost?.value),
-								refinementCost: 0,
-							};
+						if (cachedSpecificCharacterWeapon !== undefined) {
+							hasSpecificCharacterWeapon = cachedSpecificCharacterWeapon;
 						} else {
-							cachedWeaponCost = weaponCosts.reduce(
-								(acc, weaponCost) => {
-									const value = this.toNumber(weaponCost.value);
-									if (weaponCost.unit === WeaponCostUnit.SECONDS) {
-										acc.refinementCost += value;
-									} else {
-										acc.totalCost += value;
-									}
+							const specificCharacterWeapon =
+								await this.characterWeaponRepo.findOne({
+									where: [
+										{
+											characterId: slot.characterId,
+											weaponId: slot.weaponId,
+											constellationCondition: IsNull(),
+										},
+										{
+											characterId: slot.characterId,
+											weaponId: slot.weaponId,
+											constellationCondition: LessThanOrEqual(
+												characterState.activatedConstellation,
+											),
+										},
+									],
+									select: { id: true },
+								});
 
-									return acc;
-								},
-								{ totalCost: 0, refinementCost: 0 },
+							hasSpecificCharacterWeapon = !!specificCharacterWeapon;
+							characterWeaponSpecificCache.set(
+								characterWeaponSpecificKey,
+								hasSpecificCharacterWeapon,
 							);
 						}
-
-						weaponCostCache.set(weaponCostKey, cachedWeaponCost);
 					}
+				}
 
-					if (slotSide === PlayerSide.BLUE) {
-						sessionCost.blueTotalCost += cachedWeaponCost.totalCost;
-						sessionCost.blueRefinementCost += cachedWeaponCost.refinementCost;
+				if (hasSpecificCharacterWeapon) {
+					totalCost = 1;
+					totalRefinementCost = refinementCost;
+				} else {
+					const cachedGenericCharacterWeapon = characterWeaponGenericCache.get(
+						slot.weaponId,
+					);
+
+					let hasGenericCharacterWeapon = false;
+					if (cachedGenericCharacterWeapon !== undefined) {
+						hasGenericCharacterWeapon = cachedGenericCharacterWeapon;
 					} else {
-						sessionCost.redTotalCost += cachedWeaponCost.totalCost;
-						sessionCost.redRefinementCost += cachedWeaponCost.refinementCost;
+						const genericCharacterWeapon =
+							await this.characterWeaponRepo.findOneBy({
+								weaponId: slot.weaponId,
+								characterId: IsNull(),
+								constellationCondition: IsNull(),
+							});
+
+						hasGenericCharacterWeapon = !!genericCharacterWeapon;
+						characterWeaponGenericCache.set(
+							slot.weaponId,
+							hasGenericCharacterWeapon,
+						);
 					}
+
+					totalCost = 0.5;
+					totalRefinementCost = hasGenericCharacterWeapon ? 0 : refinementCost;
+				}
+
+				if (slotSide === PlayerSide.BLUE) {
+					sessionCost.blueTotalCost += totalCost;
+					sessionCost.blueRefinementCost += totalRefinementCost;
+				} else {
+					sessionCost.redTotalCost += totalCost;
+					sessionCost.redRefinementCost += totalRefinementCost;
 				}
 			}
 		}
@@ -385,6 +440,18 @@ export class UserSessionCostService {
 				sessionCost.redRefinementCost +
 				sessionCost.redLevelCost;
 		}
+
+		const supachaiMaxUses = matchState?.supachaiMaxUses ?? 1;
+		sessionCost.blueTimeBonusCost += this.getSupachaiFinalTimeBonus(
+			matchState?.blueSupachaiUsedCount ?? 0,
+			matchState?.blueSupachaiUsedSessionCount ?? 0,
+			supachaiMaxUses,
+		);
+		sessionCost.redTimeBonusCost += this.getSupachaiFinalTimeBonus(
+			matchState?.redSupachaiUsedCount ?? 0,
+			matchState?.redSupachaiUsedSessionCount ?? 0,
+			supachaiMaxUses,
+		);
 
 		const savedSessionCost = await this.sessionCostRepo.save(sessionCost);
 

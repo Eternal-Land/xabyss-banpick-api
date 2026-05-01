@@ -5,6 +5,7 @@ import {
 	CharacterCostSeederService,
 	CharacterLevelCostSeederService,
 	CharacterSeederService,
+	CharacterWeaponSeederService,
 	SeederService,
 	WeaponCostSeederService,
 	WeaponSeederService,
@@ -18,6 +19,7 @@ const services = [
 	WeaponCostSeederService,
 	CharacterCostSeederService,
 	CharacterLevelCostSeederService,
+	CharacterWeaponSeederService,
 ];
 
 @Module({

@@ -92,6 +92,14 @@ export class MatchController {
 		return BaseApiResponse.success();
 	}
 
+	@Post(":id/continue-session")
+	@SwaggerBaseApiMessageResponse()
+	@ApiBearerAuth()
+	async continueSession(@Param("id", ParseUUIDPipe) id: string) {
+		await this.matchService.continueCurrentSession(id);
+		return BaseApiResponse.success();
+	}
+
 	@Put(":id/pick-char/:charId")
 	@SwaggerBaseApiMessageResponse()
 	@ApiBearerAuth()

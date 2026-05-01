@@ -24,6 +24,10 @@ export class MatchStateResponse {
 	draftStep: number;
 	blueSupachaiUsedCount: number;
 	redSupachaiUsedCount: number;
+	blueSupachaiUsedSessionCount: number;
+	redSupachaiUsedSessionCount: number;
+	blueUsedChars: string[];
+	redUsedChars: string[];
 	supachaiMaxUses: number;
 	updatedAt: Date;
 
@@ -59,6 +63,10 @@ export class MatchStateResponse {
 			.draftStep(entity.draftStep)
 			.blueSupachaiUsedCount(entity.blueSupachaiUsedCount)
 			.redSupachaiUsedCount(entity.redSupachaiUsedCount)
+			.blueSupachaiUsedSessionCount(entity.blueSupachaiUsedSessionCount)
+			.redSupachaiUsedSessionCount(entity.redSupachaiUsedSessionCount)
+			.blueUsedChars(entity.blueUsedChars ?? [])
+			.redUsedChars(entity.redUsedChars ?? [])
 			.supachaiMaxUses(entity.supachaiMaxUses)
 			.updatedAt(entity.updatedAt)
 			.build();
