@@ -788,6 +788,7 @@ export class MatchService {
 	private async ensureSessionDataCompleted(
 		matchSessionId: number,
 		matchType: MatchType,
+		winnerSide?: PlayerSide,
 	) {
 		const allSlots = await this.banPickSlotRepo.find({
 			where: {
@@ -827,6 +828,11 @@ export class MatchService {
 
 			this.validateSlotAgainstExpectedDraftAction(slot, expectedAction, index);
 		});
+
+		// If winner override is provided by host, skip timer record validation.
+		if (winnerSide !== undefined && winnerSide !== null) {
+			return;
+		}
 
 		const sessionRecord = await this.sessionRecordRepo.findOne({
 			where: {
@@ -1453,7 +1459,7 @@ export class MatchService {
 	}
 
 	@Transactional()
-	async completeCurrentSession(matchId: string) {
+	async completeCurrentSession(matchId: string, winnerSide?: PlayerSide) {
 		const match = await this.findOne(matchId, { isHost: true });
 		if ([MatchStatus.COMPLETED, MatchStatus.CANCELLED].includes(match.status)) {
 			throw new MatchAlreadyCompletedError();
@@ -1464,7 +1470,11 @@ export class MatchService {
 		const matchState = await this.matchStateRepo.findOneOrCreate(matchId);
 		const currentSession = await this.getCurrentMatchSession(match, matchState);
 
-		await this.ensureSessionDataCompleted(currentSession.id, match.type);
+		await this.ensureSessionDataCompleted(
+			currentSession.id,
+			match.type,
+			winnerSide,
+		);
 
 		// Mark current session completed
 		currentSession.sessionStatus = MatchSessionStatus.COMPLETED;
@@ -1498,29 +1508,38 @@ export class MatchService {
 		for (const session of completedSessions) {
 			const record = records.find((r) => r.matchSessionId === session.id);
 			const cost = costs.find((c) => c.matchSessionId === session.id);
+			// If a winner override was supplied for the active session, honor it.
+			let sessionWinnerSide: PlayerSide | null = null;
+			if (winnerSide && session.id === currentSession.id) {
+				sessionWinnerSide = winnerSide;
+			} else {
+				const blueTotalTime = this.calculateSessionResultTotal(
+					record,
+					cost,
+					PlayerSide.BLUE,
+				);
 
-			const blueTotalTime = this.calculateSessionResultTotal(
-				record,
-				cost,
-				PlayerSide.BLUE,
-			);
+				const redTotalTime = this.calculateSessionResultTotal(
+					record,
+					cost,
+					PlayerSide.RED,
+				);
 
-			const redTotalTime = this.calculateSessionResultTotal(
-				record,
-				cost,
-				PlayerSide.RED,
-			);
+				if (blueTotalTime === redTotalTime) {
+					sessionWinnerSide = null;
+				} else {
+					sessionWinnerSide =
+						blueTotalTime < redTotalTime ? PlayerSide.BLUE : PlayerSide.RED;
+				}
+			}
 
-			if (blueTotalTime < redTotalTime) {
-				// Blue participant of THIS session won
-				// Note: The UI shows match.bluePlayer as the overall Blue player.
-				// In odd sessions, blueParticipant == bluePlayer. In even, redParticipant == bluePlayer.
+			if (sessionWinnerSide === PlayerSide.BLUE) {
 				if (session.blueParticipantId === match.bluePlayerId) {
 					blueWins++;
 				} else {
 					redWins++;
 				}
-			} else if (redTotalTime < blueTotalTime) {
+			} else if (sessionWinnerSide === PlayerSide.RED) {
 				if (session.redParticipantId === match.redPlayerId) {
 					redWins++;
 				} else {

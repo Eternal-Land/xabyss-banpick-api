@@ -25,6 +25,7 @@ import {
 	MatchStateResponse,
 } from "./dto";
 import { MatchService } from "./match.service";
+import { CompleteSessionRequest } from "./dto/complete-session.request";
 
 @Controller("/user/match")
 export class MatchController {
@@ -87,8 +88,11 @@ export class MatchController {
 	@Post(":id/complete-session")
 	@SwaggerBaseApiMessageResponse()
 	@ApiBearerAuth()
-	async completeSession(@Param("id", ParseUUIDPipe) id: string) {
-		await this.matchService.completeCurrentSession(id);
+	async completeSession(
+		@Param("id", ParseUUIDPipe) id: string,
+		@Body() dto: CompleteSessionRequest,
+	) {
+		await this.matchService.completeCurrentSession(id, dto?.winnerSide);
 		return BaseApiResponse.success();
 	}
 
