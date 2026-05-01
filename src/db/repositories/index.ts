@@ -9,6 +9,7 @@ export * from "./character-cost.repository";
 export * from "./account-character.repository";
 export * from "./weapon-cost.repository";
 export * from "./character-level-cost.repository";
+export * from "./character-weapon.repository";
 export * from "./match.repository";
 export * from "./match-session.repository";
 export * from "./notification.repository";

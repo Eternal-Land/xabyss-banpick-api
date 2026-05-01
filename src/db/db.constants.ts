@@ -18,6 +18,7 @@ export const TableNames = {
 	BanPickSlot: "ban_pick_slot",
 	SessionCost: "session_cost",
 	SessionRecord: "session_record",
+	CharacterWeapon: "character_weapon",
 };
 
 export const ColumnNames = {
@@ -149,6 +150,10 @@ export const ColumnNames = {
 		draftStep: "draft_step",
 		blueSupachaiUsedCount: "blue_supachai_used_count",
 		redSupachaiUsedCount: "red_supachai_used_count",
+		blueSupachaiUsedSessionCount: "blue_supachai_used_session_count",
+		redSupachaiUsedSessionCount: "red_supachai_used_session_count",
+		blueUsedChars: "blue_used_chars",
+		redUsedChars: "red_used_chars",
 		supachaiMaxUses: "supachai_max_uses",
 	},
 	BanPickSlot: {
@@ -195,6 +200,12 @@ export const ColumnNames = {
 		redChamber3: "red_chamber_3",
 		redResetTimes: "red_reset_times",
 		redFinalTime: "red_final_time",
+	},
+	CharacterWeapon: {
+		id: "character_weapon_id",
+		characterId: "character_id",
+		weaponId: "weapon_id",
+		constellationCondition: "constellation_condition",
 	},
 };
 

@@ -47,7 +47,7 @@ import { SupachaiPickSlotNotFoundError } from "./errors/supachai-pick-slot-not-f
 import { DraftTimerService } from "./draft-timer.service";
 import { SocketMatchService } from "@modules/socket/services";
 import { SocketEvents } from "@utils/constants";
-import { In, Not } from "typeorm";
+import { In, LessThan, Not } from "typeorm";
 import { UserSessionCostService } from "../session-cost";
 
 export const TURN_DURATION_SECONDS = 20;
@@ -167,6 +167,10 @@ export class MatchService {
 			draftStep: 0,
 			blueSupachaiUsedCount: 0,
 			redSupachaiUsedCount: 0,
+			blueSupachaiUsedSessionCount: 0,
+			redSupachaiUsedSessionCount: 0,
+			blueUsedChars: [],
+			redUsedChars: [],
 			supachaiMaxUses: this.getSupachaiMaxUses(match.sessionCount),
 		});
 		const sessions = await this.ensureMatchSessions(match);
@@ -245,6 +249,61 @@ export class MatchService {
 		return currentSession;
 	}
 
+	private async getUsedCharactersBeforeCurrentSession(
+		match: MatchEntity,
+		currentSession: MatchSessionEntity,
+		matchState: MatchStateEntity,
+	) {
+		if (
+			match.sessionCount === BO5_SESSION_COUNT &&
+			currentSession.sessionIndex === BO5_SESSION_COUNT
+		) {
+			return { blueUsedChars: [], redUsedChars: [] };
+		}
+
+		const blueUsedCharacters = new Set(matchState.blueUsedChars ?? []);
+		const redUsedCharacters = new Set(matchState.redUsedChars ?? []);
+
+		const previousSessions = await this.matchSessionRepo.find({
+			where: {
+				matchId: match.id,
+				isDeleted: false,
+				sessionIndex: LessThan(currentSession.sessionIndex),
+			},
+			select: { id: true },
+		});
+
+		if (!previousSessions.length) {
+			return {
+				blueUsedChars: [...blueUsedCharacters],
+				redUsedChars: [...redUsedCharacters],
+			};
+		}
+
+		const previousSessionIds = previousSessions.map((session) => session.id);
+		const previousSlots = await this.banPickSlotRepo.find({
+			where: {
+				matchSessionId: In(previousSessionIds),
+				slotType: "PICK",
+				slotStatus: "LOCKED",
+			},
+			select: { characterId: true, matchSide: true },
+		});
+
+		previousSlots.forEach((slot) => {
+			if (slot.matchSide === "BLUE") {
+				blueUsedCharacters.add(String(slot.characterId));
+			} else {
+				redUsedCharacters.add(String(slot.characterId));
+			}
+		});
+
+		return {
+			blueUsedChars: [...blueUsedCharacters],
+			redUsedChars: [...redUsedCharacters],
+		};
+	}
+
 	private mapSlotsToMatchState(
 		matchState: MatchStateEntity,
 		slots: Array<{
@@ -318,6 +377,13 @@ export class MatchService {
 		}
 
 		const currentSession = await this.getCurrentMatchSession(match, matchState);
+		const carriedUsedChars = await this.getUsedCharactersBeforeCurrentSession(
+			match,
+			currentSession,
+			matchState,
+		);
+		matchState.blueUsedChars = carriedUsedChars.blueUsedChars;
+		matchState.redUsedChars = carriedUsedChars.redUsedChars;
 
 		// Fetch ALL slots (LOCKED + SKIPPED) for total draftStep count
 		const allSlots = await this.banPickSlotRepo.find({
@@ -348,8 +414,12 @@ export class MatchService {
 			matchState.currentTurn = nextAction.side;
 		}
 
-		// Ensure turnStartedAt is set for in-progress drafts (covers pre-migration matches)
-		if (nextAction && !matchState.turnStartedAt) {
+		// Ensure turnStartedAt is set only while the session is actually live.
+		if (
+			nextAction &&
+			!matchState.turnStartedAt &&
+			currentSession.sessionStatus === MatchSessionStatus.LIVE
+		) {
 			matchState.turnStartedAt = new Date();
 		}
 
@@ -544,6 +614,71 @@ export class MatchService {
 		if (existed) {
 			throw new CharacterAlreadyUsedError();
 		}
+	}
+
+	private async ensureCharacterNotUsedInPreviousSessions(
+		match: MatchEntity,
+		currentSession: MatchSessionEntity,
+		matchState: MatchStateEntity,
+		playerSide: PlayerSide,
+		characterId: number,
+	) {
+		const usedCharacterIds = await this.getUsedCharactersBeforeCurrentSession(
+			match,
+			currentSession,
+			matchState,
+		);
+		const sideUsedCharacters =
+			playerSide === PlayerSide.BLUE
+				? usedCharacterIds.blueUsedChars
+				: usedCharacterIds.redUsedChars;
+
+		if (sideUsedCharacters.includes(String(characterId))) {
+			throw new CharacterAlreadyUsedError();
+		}
+	}
+
+	@Transactional()
+	async continueCurrentSession(matchId: string) {
+		const match = await this.findOne(matchId, { isHost: true });
+		if ([MatchStatus.COMPLETED, MatchStatus.CANCELLED].includes(match.status)) {
+			throw new MatchAlreadyCompletedError();
+		}
+
+		if (match.status !== MatchStatus.WAITING) {
+			throw new BadRequestException("Match is not waiting for continuation");
+		}
+
+		const matchState = await this.matchStateRepo.findOneOrCreate(matchId);
+		const currentSession = await this.getCurrentMatchSession(match, matchState);
+
+		if (currentSession.sessionStatus !== MatchSessionStatus.PENDING) {
+			throw new BadRequestException("Current session is not pending");
+		}
+
+		currentSession.sessionStatus = MatchSessionStatus.LIVE;
+		await this.matchSessionRepo.save(currentSession);
+
+		matchState.turnStartedAt = new Date();
+		await this.matchStateRepo.save(matchState);
+
+		await this.matchRepo.update(matchId, { status: MatchStatus.LIVE });
+
+		const updatedMatch = await this.findOne(matchId);
+		await this.saveAndBroadcastMatchState(matchId, updatedMatch);
+		this.socketMatchService.emitToMatch(
+			matchId,
+			SocketEvents.UPDATE_MATCH_SESSION,
+			{
+				matchId,
+				currentSession: currentSession.id,
+			},
+		);
+		this.socketMatchService.emitToMatch(matchId, SocketEvents.MATCH_UPDATED, {
+			...updatedMatch,
+		});
+
+		await this.draftTimerService.scheduleFromMatchState(matchId);
 	}
 
 	private async ensureTravellerNotPickedForSide(
@@ -880,6 +1015,13 @@ export class MatchService {
 			);
 		}
 
+		await this.ensureCharacterNotUsedInPreviousSessions(
+			match,
+			matchSession,
+			matchState,
+			playerSide,
+			charId,
+		);
 		await this.ensureCharacterNotUsedInSession(matchSession.id, charId);
 
 		await this.createBanPickSlot(
@@ -916,6 +1058,8 @@ export class MatchService {
 		this.ensureCorrectTurn(matchState, playerSide);
 		this.deductTimeBank(matchState, playerSide);
 
+		// For bans: only check current session (don't carry forward bans from previous sessions).
+		// Picks carry forward but bans do not.
 		await this.ensureCharacterNotUsedInSession(matchSession.id, charId);
 
 		await this.createBanPickSlot(
@@ -1185,6 +1329,25 @@ export class MatchService {
 			throw new MatchNotFoundError();
 		}
 
+		const allDraftSlots = await this.banPickSlotRepo.find({
+			where: {
+				matchSessionId: matchSession.id,
+				slotStatus: In(["LOCKED", "SKIPPED"]),
+			},
+			select: {
+				slotStatus: true,
+			},
+		});
+
+		if (
+			allDraftSlots.length !== DRAFT_SEQUENCE.length ||
+			allDraftSlots.some((slot) => slot.slotStatus === "SKIPPED")
+		) {
+			throw new BadRequestException(
+				"Supachai can only be used after the ban/pick draft is fully locked",
+			);
+		}
+
 		const normalizedSide = this.normalizePlayerSide(playerSide);
 		const sidePickSlots = await this.banPickSlotRepo.find({
 			where: {
@@ -1206,9 +1369,19 @@ export class MatchService {
 			playerSide === PlayerSide.BLUE
 				? "blueSupachaiUsedCount"
 				: "redSupachaiUsedCount";
+		const supachaiUsedSessionKey =
+			playerSide === PlayerSide.BLUE
+				? "blueSupachaiUsedSessionCount"
+				: "redSupachaiUsedSessionCount";
 
 		if (matchState[supachaiUsedKey] >= matchState.supachaiMaxUses) {
 			throw new SupachaiLimitReachedError();
+		}
+
+		if (matchState[supachaiUsedSessionKey] >= 1) {
+			throw new BadRequestException(
+				"Supachai can only be used once per session",
+			);
 		}
 
 		const selectedPickSlot = sidePickSlots.find(
@@ -1230,6 +1403,25 @@ export class MatchService {
 		}
 
 		await this.ensureCharacterNotUsedInSession(matchSession.id, toCharId);
+		await this.ensureCharacterNotUsedInPreviousSessions(
+			match,
+			matchSession,
+			matchState,
+			playerSide,
+			toCharId,
+		);
+
+		const sideUsedChars =
+			playerSide === PlayerSide.BLUE
+				? new Set(matchState.blueUsedChars ?? [])
+				: new Set(matchState.redUsedChars ?? []);
+		sideUsedChars.add(String(selectedPickSlot.characterId));
+		sideUsedChars.add(String(toCharId));
+		if (playerSide === PlayerSide.BLUE) {
+			matchState.blueUsedChars = [...sideUsedChars];
+		} else {
+			matchState.redUsedChars = [...sideUsedChars];
+		}
 
 		selectedPickSlot.characterId = toCharId;
 		selectedPickSlot.weaponId = null;
@@ -1238,6 +1430,7 @@ export class MatchService {
 		await this.banPickSlotRepo.save(selectedPickSlot);
 
 		matchState[supachaiUsedKey] += 1;
+		matchState[supachaiUsedSessionKey] += 1;
 		await this.matchStateRepo.save(matchState);
 
 		try {
@@ -1261,7 +1454,6 @@ export class MatchService {
 
 	@Transactional()
 	async completeCurrentSession(matchId: string) {
-		const hostId = this.cls.get("profile.id");
 		const match = await this.findOne(matchId, { isHost: true });
 		if ([MatchStatus.COMPLETED, MatchStatus.CANCELLED].includes(match.status)) {
 			throw new MatchAlreadyCompletedError();
@@ -1351,10 +1543,8 @@ export class MatchService {
 				(s) => s.sessionStatus === MatchSessionStatus.PENDING,
 			);
 			if (nextSession) {
-				nextSession.sessionStatus = MatchSessionStatus.LIVE;
-				await this.matchSessionRepo.save(nextSession);
-
-				// Re-assign matchState to new session, empty out slots, reset timer
+				// Re-assign matchState to the next session, but keep the match waiting
+				// until the host explicitly continues.
 				await this.matchStateRepo.update(
 					{ matchId },
 					{
@@ -1368,15 +1558,27 @@ export class MatchService {
 						redSelectedWeapons: [],
 						blueTimeBank: TIME_BANK_SECONDS,
 						redTimeBank: TIME_BANK_SECONDS,
-						turnStartedAt: new Date(),
+						turnStartedAt: null,
 						draftStep: 0,
 						blueSupachaiUsedCount: matchState.redSupachaiUsedCount,
 						redSupachaiUsedCount: matchState.blueSupachaiUsedCount,
+						blueSupachaiUsedSessionCount: 0,
+						redSupachaiUsedSessionCount: 0,
+						blueUsedChars:
+							nextSession.sessionIndex === BO5_SESSION_COUNT &&
+							match.sessionCount === BO5_SESSION_COUNT
+								? []
+								: matchState.redUsedChars,
+						redUsedChars:
+							nextSession.sessionIndex === BO5_SESSION_COUNT &&
+							match.sessionCount === BO5_SESSION_COUNT
+								? []
+								: matchState.blueUsedChars,
 					},
 				);
 
-				// Swap blue and red player for side "Đổi bên" UI effect
 				await this.matchRepo.update(matchId, {
+					status: MatchStatus.WAITING,
 					bluePlayerId: match.redPlayerId,
 					redPlayerId: match.bluePlayerId,
 				});
@@ -1394,11 +1596,6 @@ export class MatchService {
 		this.socketMatchService.emitToMatch(matchId, SocketEvents.MATCH_UPDATED, {
 			...updatedMatch,
 		});
-
-		// Schedule timer for next session if match is still live
-		if (updatedMatch.status === MatchStatus.LIVE) {
-			await this.draftTimerService.scheduleFromMatchState(matchId);
-		}
 	}
 
 	private calculateSessionResultTotal(

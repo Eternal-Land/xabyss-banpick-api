@@ -10,6 +10,7 @@ import { AccountRole } from "@utils/enums";
 import { WeaponCostSeederService } from "./weapon-cost-seeder.service";
 import { CharacterCostSeederService } from "./character-cost-seeder.service";
 import { CharacterLevelCostSeederService } from "./character-level-cost-seeder.service";
+import { CharacterWeaponSeederService } from "./character-weapon-seeder.service";
 
 @Injectable()
 export class SeederService {
@@ -22,6 +23,7 @@ export class SeederService {
 		private readonly weaponCostSeeder: WeaponCostSeederService,
 		private readonly characterCostSeeder: CharacterCostSeederService,
 		private readonly characterLevelCostSeeder: CharacterLevelCostSeederService,
+		private readonly characterWeaponSeeder: CharacterWeaponSeederService,
 	) {}
 
 	private async findOrCreateAdminAccount() {
@@ -59,6 +61,7 @@ export class SeederService {
 			this.weaponCostSeeder.seed(),
 			this.characterCostSeeder.seed(),
 			this.characterLevelCostSeeder.seed(),
+			this.characterWeaponSeeder.seed(),
 		]);
 		this.logger.log("Database seeded successfully.");
 	}

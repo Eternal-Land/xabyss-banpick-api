@@ -133,6 +133,32 @@ export class MatchStateEntity {
 	redSupachaiUsedCount: number;
 
 	@Column({
+		name: ColumnNames.MatchState.blueSupachaiUsedSessionCount,
+		type: "int",
+		default: 0,
+	})
+	blueSupachaiUsedSessionCount: number;
+
+	@Column({
+		name: ColumnNames.MatchState.redSupachaiUsedSessionCount,
+		type: "int",
+		default: 0,
+	})
+	redSupachaiUsedSessionCount: number;
+
+	@Column({
+		name: ColumnNames.MatchState.blueUsedChars,
+		type: "simple-array",
+	})
+	blueUsedChars: string[];
+
+	@Column({
+		name: ColumnNames.MatchState.redUsedChars,
+		type: "simple-array",
+	})
+	redUsedChars: string[];
+
+	@Column({
 		name: ColumnNames.MatchState.supachaiMaxUses,
 		type: "int",
 		default: 1,
