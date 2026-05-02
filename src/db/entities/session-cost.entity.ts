@@ -79,6 +79,15 @@ export class SessionCostEntity extends BaseAuditEntity {
 	blueTimeBonusCost: number;
 
 	@Column({
+		name: ColumnNames.SessionCost.blueSpecialCost,
+		type: "decimal",
+		precision: 7,
+		scale: 2,
+		default: 0,
+	})
+	blueSpecialCost: number;
+
+	@Column({
 		name: ColumnNames.SessionCost.redTotalCost,
 		type: "decimal",
 		precision: 7,
@@ -131,4 +140,13 @@ export class SessionCostEntity extends BaseAuditEntity {
 		default: 0,
 	})
 	redTimeBonusCost: number;
+
+	@Column({
+		name: ColumnNames.SessionCost.redSpecialCost,
+		type: "decimal",
+		precision: 7,
+		scale: 2,
+		default: 0,
+	})
+	redSpecialCost: number;
 }

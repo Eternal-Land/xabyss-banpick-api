@@ -4,6 +4,7 @@ import {
 	BanPickSlotRepository,
 	CharacterCostRepository,
 	CharacterLevelCostRepository,
+	CharacterRepository,
 	CharacterWeaponRepository,
 	CostMilestoneRepository,
 	MatchStateRepository,
@@ -68,6 +69,8 @@ export class UserSessionCostService {
 		);
 		sessionCost.redLevelCost = this.toNumber(sessionCost.redLevelCost);
 		sessionCost.redTimeBonusCost = this.toNumber(sessionCost.redTimeBonusCost);
+		sessionCost.blueSpecialCost = this.toNumber(sessionCost.blueSpecialCost);
+		sessionCost.redSpecialCost = this.toNumber(sessionCost.redSpecialCost);
 	}
 
 	private async findOrCreateSessionCost(matchSessionId: number) {
@@ -86,12 +89,14 @@ export class UserSessionCostService {
 					blueRefinementCost: 0,
 					blueLevelCost: 0,
 					blueTimeBonusCost: 0,
+					blueSpecialCost: 0,
 					redTotalCost: 0,
 					redCostMilestone: 0,
 					redConstellationCost: 0,
 					redRefinementCost: 0,
 					redLevelCost: 0,
 					redTimeBonusCost: 0,
+					redSpecialCost: 0,
 				}),
 			);
 		}
@@ -104,6 +109,7 @@ export class UserSessionCostService {
 		private readonly matchSessionRepo: MatchSessionRepository,
 		private readonly matchStateRepo: MatchStateRepository,
 		private readonly banPickSlotRepo: BanPickSlotRepository,
+		private readonly characterRepo: CharacterRepository,
 		private readonly characterCostRepo: CharacterCostRepository,
 		private readonly accountCharacterRepo: AccountCharacterRepository,
 		private readonly characterWeaponRepo: CharacterWeaponRepository,
@@ -157,6 +163,13 @@ export class UserSessionCostService {
 		});
 
 		const sessionCost = await this.findOrCreateSessionCost(matchSessionId);
+		if (dto.specialCost !== undefined) {
+			if (dto.side === PlayerSide.BLUE) {
+				sessionCost.blueSpecialCost = this.toNumber(dto.specialCost);
+			} else if (dto.side === PlayerSide.RED) {
+				sessionCost.redSpecialCost = this.toNumber(dto.specialCost);
+			}
+		}
 
 		const slots = await this.banPickSlotRepo.find({
 			where: {
@@ -186,12 +199,14 @@ export class UserSessionCostService {
 		sessionCost.blueRefinementCost = 0;
 		sessionCost.blueLevelCost = 0;
 		sessionCost.blueTimeBonusCost = 0;
+		sessionCost.blueSpecialCost = this.toNumber(sessionCost.blueSpecialCost);
 		sessionCost.redTotalCost = 0;
 		sessionCost.redCostMilestone = 0;
 		sessionCost.redConstellationCost = 0;
 		sessionCost.redRefinementCost = 0;
 		sessionCost.redLevelCost = 0;
 		sessionCost.redTimeBonusCost = 0;
+		sessionCost.redSpecialCost = this.toNumber(sessionCost.redSpecialCost);
 
 		const characterStateCache = new Map<
 			string,
@@ -201,6 +216,10 @@ export class UserSessionCostService {
 		const characterLevelCostCache = new Map<string, number>();
 		const characterWeaponSpecificCache = new Map<string, boolean>();
 		const characterWeaponGenericCache = new Map<number, boolean>();
+		const characterCache = new Map<
+			string,
+			{ key: string; name: string } | null
+		>();
 
 		for (const slot of [...slots].reverse()) {
 			const slotSide =
@@ -280,6 +299,42 @@ export class UserSessionCostService {
 							sessionCost.blueLevelCost += characterLevelCostValue;
 						} else {
 							sessionCost.redLevelCost += characterLevelCostValue;
+						}
+					}
+
+					// Columbina special case: add bonus if constellation >= 2 and level is 95 or 100
+					if (characterState.activatedConstellation >= 2 && slot.characterId) {
+						const characterLevelValue = characterState.characterLevel;
+						if (characterLevelValue === 95 || characterLevelValue === 100) {
+							const characterCacheKey = String(slot.characterId);
+							let character = characterCache.get(characterCacheKey);
+
+							if (character === undefined) {
+								// Fetch character to check key/name
+								const fetchedCharacter = await this.characterRepo.findOne({
+									where: { id: slot.characterId },
+									select: { key: true, name: true },
+								});
+								character = fetchedCharacter
+									? { key: fetchedCharacter.key, name: fetchedCharacter.name }
+									: null;
+								characterCache.set(characterCacheKey, character);
+							}
+
+							if (character) {
+								const isColumbina =
+									character.key?.toLowerCase() === "columbina" ||
+									character.name?.toLowerCase() === "columbina";
+
+								if (isColumbina) {
+									const bonus = characterLevelValue === 95 ? 5 : 10;
+									if (slotSide === PlayerSide.BLUE) {
+										sessionCost.blueLevelCost += bonus;
+									} else {
+										sessionCost.redLevelCost += bonus;
+									}
+								}
+							}
 						}
 					}
 				}
@@ -397,14 +452,19 @@ export class UserSessionCostService {
 			}
 		}
 
+		const blueSpecialCost = this.toNumber(sessionCost?.blueSpecialCost);
+		const blueFinalTotalCost = Math.max(
+			0,
+			this.toNumber(sessionCost.blueTotalCost) - blueSpecialCost,
+		);
 		const blueMilestone = await this.costMilestoneRepo.findOne({
 			where: [
 				{
-					costFrom: LessThanOrEqual(sessionCost.blueTotalCost),
-					costTo: MoreThanOrEqual(sessionCost.blueTotalCost),
+					costFrom: LessThanOrEqual(blueFinalTotalCost),
+					costTo: MoreThanOrEqual(blueFinalTotalCost),
 				},
 				{
-					costFrom: LessThanOrEqual(sessionCost.blueTotalCost),
+					costFrom: LessThanOrEqual(blueFinalTotalCost),
 					costTo: IsNull(),
 				},
 			],
@@ -414,19 +474,24 @@ export class UserSessionCostService {
 			const secPerCost = this.toNumber(blueMilestone.secPerCost);
 			sessionCost.blueCostMilestone = blueMilestone.id;
 			sessionCost.blueTimeBonusCost =
-				this.toNumber(sessionCost.blueTotalCost) * secPerCost +
+				blueFinalTotalCost * secPerCost +
 				sessionCost.blueRefinementCost +
 				sessionCost.blueLevelCost;
 		}
 
+		const redSpecialCost = this.toNumber(sessionCost?.redSpecialCost);
+		const redFinalTotalCost = Math.max(
+			0,
+			this.toNumber(sessionCost.redTotalCost) - redSpecialCost,
+		);
 		const redMilestone = await this.costMilestoneRepo.findOne({
 			where: [
 				{
-					costFrom: LessThanOrEqual(sessionCost.redTotalCost),
-					costTo: MoreThanOrEqual(sessionCost.redTotalCost),
+					costFrom: LessThanOrEqual(redFinalTotalCost),
+					costTo: MoreThanOrEqual(redFinalTotalCost),
 				},
 				{
-					costFrom: LessThanOrEqual(sessionCost.redTotalCost),
+					costFrom: LessThanOrEqual(redFinalTotalCost),
 					costTo: IsNull(),
 				},
 			],
@@ -436,7 +501,7 @@ export class UserSessionCostService {
 			const secPerCost = this.toNumber(redMilestone.secPerCost);
 			sessionCost.redCostMilestone = redMilestone.id;
 			sessionCost.redTimeBonusCost =
-				this.toNumber(sessionCost.redTotalCost) * secPerCost +
+				redFinalTotalCost * secPerCost +
 				sessionCost.redRefinementCost +
 				sessionCost.redLevelCost;
 		}

@@ -57,6 +57,7 @@ export class MatchStateResponse {
 			)
 			.blueTimeBank(entity.blueTimeBank)
 			.redTimeBank(entity.redTimeBank)
+
 			.turnStartedAt(entity.turnStartedAt)
 			.isPaused(entity.isPaused)
 			.pausedElapsedMs(entity.pausedElapsedMs)
