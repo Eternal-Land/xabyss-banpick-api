@@ -324,7 +324,7 @@ export class MatchService {
 		const redSelectedWeaponRefinements: number[] = [];
 
 		slots.forEach((slot) => {
-			const characterId = String(slot.characterId);
+			const characterId = slot.characterId ? String(slot.characterId) : "";
 			const weaponId = slot.weaponId ? String(slot.weaponId) : "";
 			const weaponRefinement =
 				typeof slot.weaponRefinement === "number" ? slot.weaponRefinement : 0;
@@ -402,9 +402,8 @@ export class MatchService {
 			},
 		});
 
-		// Only LOCKED slots contribute to character/weapon arrays
-		const lockedSlots = allSlots.filter((s) => s.slotStatus === "LOCKED");
-		this.mapSlotsToMatchState(matchState, lockedSlots);
+		// Include both LOCKED and SKIPPED slots to maintain correct array lengths
+		this.mapSlotsToMatchState(matchState, allSlots);
 
 		const draftStep = Math.min(allSlots.length, DRAFT_SEQUENCE.length);
 		matchState.draftStep = draftStep;
