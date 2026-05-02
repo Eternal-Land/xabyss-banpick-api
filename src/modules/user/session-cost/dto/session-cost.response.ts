@@ -28,6 +28,9 @@ export class SessionCostResponse {
 	blueTimeBonusCost: number;
 
 	@ApiProperty()
+	blueSpecialCost: number;
+
+	@ApiProperty()
 	redTotalCost: number;
 
 	@ApiProperty()
@@ -45,6 +48,9 @@ export class SessionCostResponse {
 	@ApiProperty()
 	redTimeBonusCost: number;
 
+	@ApiProperty()
+	redSpecialCost: number;
+
 	static fromEntity(entity: SessionCostEntity): SessionCostResponse {
 		return Builder(SessionCostResponse)
 			.id(entity.id)
@@ -55,12 +61,14 @@ export class SessionCostResponse {
 			.blueRefinementCost(Number(entity.blueRefinementCost))
 			.blueLevelCost(Number(entity.blueLevelCost))
 			.blueTimeBonusCost(Number(entity.blueTimeBonusCost))
+			.blueSpecialCost(Number(entity.blueSpecialCost ?? 0))
 			.redTotalCost(Number(entity.redTotalCost))
 			.redCostMilestone(Number(entity.redCostMilestone))
 			.redConstellationCost(Number(entity.redConstellationCost))
 			.redRefinementCost(Number(entity.redRefinementCost))
 			.redLevelCost(Number(entity.redLevelCost))
 			.redTimeBonusCost(Number(entity.redTimeBonusCost))
+			.redSpecialCost(Number(entity.redSpecialCost ?? 0))
 			.build();
 	}
 }

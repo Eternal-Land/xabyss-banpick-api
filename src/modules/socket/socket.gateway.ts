@@ -20,11 +20,22 @@ import { SkipAuth } from "@utils";
 import { SocketExceptionFilter } from "./socket.exception-filter";
 import { UserSessionRecordService } from "@modules/user/session-record";
 import { SaveSessionRecordRequest } from "@modules/user/session-record/dto";
+import { UserSessionCostService } from "@modules/user/session-cost";
+import { SessionCostRequest } from "@modules/user/session-cost/dto";
+import { MatchStateRepository } from "@db/repositories";
+import { SessionCostEntity } from "@db/entities";
 
 type SaveMatchTimerInputsPayload = {
 	matchId?: string;
 	matchSessionId?: number;
 	record?: SaveSessionRecordRequest;
+};
+
+type UpdateMatchStatePayload = {
+	matchId?: string;
+	blueSpecialCost?: number;
+	redSpecialCost?: number;
+	updatedBy?: string;
 };
 
 const SESSION_RECORD_FIELDS: Array<keyof SaveSessionRecordRequest> = [
@@ -53,6 +64,8 @@ export class SocketGateway
 		private readonly socketService: SocketService,
 		private readonly socketMatchService: SocketMatchService,
 		private readonly userSessionRecordService: UserSessionRecordService,
+		private readonly userSessionCostService: UserSessionCostService,
+		private readonly matchStateRepository: MatchStateRepository,
 	) {}
 
 	// Init the gateway and set the server instance in the service
@@ -138,6 +151,102 @@ export class SocketGateway
 				updatedBy: payload.updatedBy,
 			},
 		);
+
+		return { ok: true };
+	}
+
+	@SubscribeMessage(SocketEvents.UPDATE_MATCH_STATE)
+	@SkipAuth()
+	async handleUpdateMatchState(
+		client: Socket,
+		payload: UpdateMatchStatePayload,
+	) {
+		if (!payload?.matchId) {
+			return { ok: false };
+		}
+
+		const matchState = await this.matchStateRepository.findOneOrCreate(
+			payload.matchId,
+		);
+		let updated = false;
+
+		const currentSessionId = Number(matchState.currentSession);
+		if (!Number.isInteger(currentSessionId) || currentSessionId <= 0) {
+			return { ok: false };
+		}
+
+		// find or create session cost for current session
+		const sessionCost = await this.matchStateRepository.manager
+			.getRepository(SessionCostEntity)
+			.findOne({
+				where: { matchSessionId: currentSessionId },
+				order: { id: "DESC" },
+			});
+
+		// fallback: use SessionCostRepository via manager if not found
+		let currentSessionCost = sessionCost;
+		if (!currentSessionCost) {
+			currentSessionCost = await this.matchStateRepository.manager
+				.getRepository(SessionCostEntity)
+				.save({
+					matchSessionId: currentSessionId,
+					blueTotalCost: 0,
+					blueCostMilestone: 0,
+					blueConstellationCost: 0,
+					blueRefinementCost: 0,
+					blueLevelCost: 0,
+					blueTimeBonusCost: 0,
+					redTotalCost: 0,
+					redCostMilestone: 0,
+					redConstellationCost: 0,
+					redRefinementCost: 0,
+					redLevelCost: 0,
+					redTimeBonusCost: 0,
+					blueSpecialCost: 0,
+					redSpecialCost: 0,
+				});
+		}
+
+		if (payload.blueSpecialCost !== undefined) {
+			const nextBlueSpecialCost = Number(payload.blueSpecialCost);
+			if (Number.isFinite(nextBlueSpecialCost) && nextBlueSpecialCost >= 0) {
+				if (
+					Number(currentSessionCost.blueSpecialCost) !== nextBlueSpecialCost
+				) {
+					currentSessionCost.blueSpecialCost = nextBlueSpecialCost;
+					updated = true;
+				}
+			}
+		}
+
+		if (payload.redSpecialCost !== undefined) {
+			const nextRedSpecialCost = Number(payload.redSpecialCost);
+			if (Number.isFinite(nextRedSpecialCost) && nextRedSpecialCost >= 0) {
+				if (Number(currentSessionCost.redSpecialCost) !== nextRedSpecialCost) {
+					currentSessionCost.redSpecialCost = nextRedSpecialCost;
+					updated = true;
+				}
+			}
+		}
+
+		if (!updated) {
+			return { ok: true };
+		}
+
+		const savedSessionCost = await this.matchStateRepository.manager
+			.getRepository(SessionCostEntity)
+			.save(currentSessionCost);
+
+		// notify clients to re-fetch session cost for current session
+		this.socketMatchService.emitToMatch(
+			payload.matchId,
+			SocketEvents.UPDATE_MATCH_SESSION,
+			{ matchSessionId: currentSessionId },
+		);
+
+		void this.userSessionCostService
+			.calculate(currentSessionId, {} as SessionCostRequest)
+			.catch(() => undefined);
 
 		return { ok: true };
 	}
