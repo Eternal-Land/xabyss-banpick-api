@@ -80,3 +80,4 @@ return new ApiResponseDto(data, pagination, message)
 - TypeORM with MySQL 8.0
 - Use `nestjs-cls` for request-scoped transactions
 - Entity files use decorators (`@Entity`, `@Column`, etc.)
+- Ban-pick special-cost inputs live on `match_state` as `blueSpecialCost` and `redSpecialCost`, and session-cost recalculation reads those values when computing time bonus.

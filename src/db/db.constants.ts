@@ -146,6 +146,7 @@ export const ColumnNames = {
 		redSelectedWeapons: "red_selected_weapons",
 		blueTimeBank: "blue_time_bank",
 		redTimeBank: "red_time_bank",
+		// moved special cost to SessionCost table
 		turnStartedAt: "turn_started_at",
 		draftStep: "draft_step",
 		blueSupachaiUsedCount: "blue_supachai_used_count",
@@ -186,6 +187,8 @@ export const ColumnNames = {
 		redRefinementCost: "red_refinement_cost",
 		redLevelCost: "red_level_cost",
 		redTimeBonusCost: "red_time_bonus_cost",
+		blueSpecialCost: "blue_special_cost",
+		redSpecialCost: "red_special_cost",
 	},
 	SessionRecord: {
 		id: "session_record_id",
