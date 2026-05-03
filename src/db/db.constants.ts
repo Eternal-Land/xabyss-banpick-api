@@ -130,6 +130,7 @@ export const ColumnNames = {
 		totalCostBlue: "total_cost_blue",
 		totalCostRed: "total_cost_red",
 		sessionStatus: "session_status",
+		winnerSide: "winner_side",
 	},
 	MatchState: {
 		id: "match_state_id",

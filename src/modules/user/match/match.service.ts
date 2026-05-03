@@ -5,14 +5,11 @@ import {
 	MatchRepository,
 	MatchSessionRepository,
 	MatchStateRepository,
-	SessionCostRepository,
 	SessionRecordRepository,
 	WeaponRepository,
 } from "@db/repositories";
 import {
 	MatchEntity,
-	SessionCostEntity,
-	SessionRecordEntity,
 	MatchSessionEntity,
 	MatchStateEntity,
 } from "@db/entities";
@@ -103,7 +100,6 @@ export class MatchService {
 		private readonly characterRepo: CharacterRepository,
 		private readonly weaponRepo: WeaponRepository,
 		private readonly sessionRecordRepo: SessionRecordRepository,
-		private readonly sessionCostRepo: SessionCostRepository,
 		private readonly draftTimerService: DraftTimerService,
 	) {}
 
@@ -1154,6 +1150,11 @@ export class MatchService {
 		});
 
 		matchState.draftStep += 1;
+
+		// Zero out the side's bank since it was fully consumed by the timeout
+		const bankKey =
+			action.side === PlayerSide.BLUE ? "blueTimeBank" : "redTimeBank";
+		matchState[bankKey] = 0;
 	}
 
 	/**
@@ -1458,7 +1459,7 @@ export class MatchService {
 	}
 
 	@Transactional()
-	async completeCurrentSession(matchId: string, winnerSide?: PlayerSide) {
+	async completeCurrentSession(matchId: string, winnerSide: PlayerSide) {
 		const match = await this.findOne(matchId, { isHost: true });
 		if ([MatchStatus.COMPLETED, MatchStatus.CANCELLED].includes(match.status)) {
 			throw new MatchAlreadyCompletedError();
@@ -1475,27 +1476,16 @@ export class MatchService {
 			winnerSide,
 		);
 
-		// Mark current session completed
+		// Mark current session completed and persist the winner
 		currentSession.sessionStatus = MatchSessionStatus.COMPLETED;
+		currentSession.winnerSide = winnerSide;
 		await this.matchSessionRepo.save(currentSession);
 
-		// Fetch all sessions and records to determine wins
+		// Fetch all sessions to determine wins
 		const sessions = await this.matchSessionRepo.find({
 			where: { matchId, isDeleted: false },
 			order: { sessionIndex: "ASC", id: "ASC" },
 		});
-
-		const sessionIds = sessions.map((s) => s.id);
-		const records = sessionIds.length
-			? await this.sessionRecordRepo.find({
-					where: { matchSessionId: In(sessionIds), isDeleted: false },
-				})
-			: [];
-		const costs = sessionIds.length
-			? await this.sessionCostRepo.find({
-					where: { matchSessionId: In(sessionIds) },
-				})
-			: [];
 
 		let blueWins = 0;
 		let redWins = 0;
@@ -1505,32 +1495,7 @@ export class MatchService {
 		);
 
 		for (const session of completedSessions) {
-			const record = records.find((r) => r.matchSessionId === session.id);
-			const cost = costs.find((c) => c.matchSessionId === session.id);
-			// If a winner override was supplied for the active session, honor it.
-			let sessionWinnerSide: PlayerSide | null = null;
-			if (winnerSide && session.id === currentSession.id) {
-				sessionWinnerSide = winnerSide;
-			} else {
-				const blueTotalTime = this.calculateSessionResultTotal(
-					record,
-					cost,
-					PlayerSide.BLUE,
-				);
-
-				const redTotalTime = this.calculateSessionResultTotal(
-					record,
-					cost,
-					PlayerSide.RED,
-				);
-
-				if (blueTotalTime === redTotalTime) {
-					sessionWinnerSide = null;
-				} else {
-					sessionWinnerSide =
-						blueTotalTime < redTotalTime ? PlayerSide.BLUE : PlayerSide.RED;
-				}
-			}
+			const sessionWinnerSide = session.winnerSide;
 
 			if (sessionWinnerSide === PlayerSide.BLUE) {
 				if (session.blueParticipantId === match.bluePlayerId) {
@@ -1614,27 +1579,5 @@ export class MatchService {
 		this.socketMatchService.emitToMatch(matchId, SocketEvents.MATCH_UPDATED, {
 			...updatedMatch,
 		});
-	}
-
-	private calculateSessionResultTotal(
-		record: SessionRecordEntity | undefined,
-		cost: SessionCostEntity | undefined,
-		side: PlayerSide,
-	) {
-		if (side === PlayerSide.BLUE) {
-			return (
-				(record ? Number(cost?.blueTimeBonusCost ?? 0) : 0) +
-				Math.max(0, Number(record?.blueChamber1 ?? 0)) +
-				Math.max(0, Number(record?.blueChamber2 ?? 0)) +
-				Math.max(0, Number(record?.blueChamber3 ?? 0))
-			);
-		}
-
-		return (
-			(record ? Number(cost?.redTimeBonusCost ?? 0) : 0) +
-			Math.max(0, Number(record?.redChamber1 ?? 0)) +
-			Math.max(0, Number(record?.redChamber2 ?? 0)) +
-			Math.max(0, Number(record?.redChamber3 ?? 0))
-		);
 	}
 }

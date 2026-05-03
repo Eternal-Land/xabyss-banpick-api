@@ -149,24 +149,6 @@ export class MatchReportDetailResponse {
 	@ApiProperty({ type: MatchSessionReportItemResponse, isArray: true })
 	sessions: MatchSessionReportItemResponse[];
 
-	private static resolveWinner(
-		record?: SessionRecordEntity | null,
-		cost?: SessionCostEntity | null,
-	): PlayerSide | null {
-		const totals = this.resolveResultTotals(record, cost);
-		if (!totals) {
-			return null;
-		}
-
-		const { blueTotalTime, redTotalTime } = totals;
-
-		if (blueTotalTime === redTotalTime) {
-			return null;
-		}
-
-		return blueTotalTime < redTotalTime ? PlayerSide.BLUE : PlayerSide.RED;
-	}
-
 	private static resolveResultTotals(
 		record?: SessionRecordEntity | null,
 		cost?: SessionCostEntity | null,
@@ -197,9 +179,9 @@ export class MatchReportDetailResponse {
 		costsBySessionId: Map<number, SessionCostEntity>,
 	): MatchReportDetailResponse {
 		const mappedSessions = sessions.map((session) => {
+			const winnerSide = session.winnerSide ?? null;
 			const record = recordsBySessionId.get(session.id) ?? null;
 			const cost = costsBySessionId.get(session.id) ?? null;
-			const winnerSide = this.resolveWinner(record, cost);
 			const resultTotals = this.resolveResultTotals(record, cost);
 			return Builder(MatchSessionReportItemResponse)
 				.matchSessionId(session.id)

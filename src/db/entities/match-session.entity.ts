@@ -86,4 +86,11 @@ export class MatchSessionEntity extends BaseAuditEntity {
 
 	@OneToMany(() => BanPickSlotEntity, (banPickSlot) => banPickSlot.matchSession)
 	banPickSlots: BanPickSlotEntity[];
+
+	@Column({
+		name: ColumnNames.MatchSession.winnerSide,
+		type: "int",
+		nullable: true,
+	})
+	winnerSide: PlayerSide | null;
 }

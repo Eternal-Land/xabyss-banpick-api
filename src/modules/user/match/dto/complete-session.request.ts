@@ -1,10 +1,9 @@
-import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEnum, IsOptional } from "class-validator";
+import { ApiProperty } from "@nestjs/swagger";
+import { IsEnum } from "class-validator";
 import { PlayerSide } from "@utils/enums";
 
 export class CompleteSessionRequest {
-	@ApiPropertyOptional({ enum: [PlayerSide.BLUE, PlayerSide.RED] })
-	@IsOptional()
+	@ApiProperty({ enum: [PlayerSide.BLUE, PlayerSide.RED] })
 	@IsEnum(PlayerSide)
-	winnerSide?: PlayerSide;
+	winnerSide: PlayerSide;
 }
