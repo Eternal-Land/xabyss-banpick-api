@@ -58,7 +58,7 @@ export class MatchController {
 	@SkipAuth()
 	async getMatchState(@Param("id", ParseUUIDPipe) id: string) {
 		const matchState = await this.matchService.getMatchState(id);
-		return BaseApiResponse.success(MatchStateResponse.fromEntity(matchState));
+		return BaseApiResponse.success(matchState);
 	}
 
 	@Get(":id")
