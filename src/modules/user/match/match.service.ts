@@ -1,6 +1,7 @@
 import {
 	AccountCharacterRepository,
 	BanPickSlotRepository,
+	CharacterCostRepository,
 	CharacterRepository,
 	MatchRepository,
 	MatchSessionRepository,
@@ -16,7 +17,10 @@ import {
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { AccountCharacterNotFoundError } from "@modules/account-character/errors";
 import { WeaponNotFoundError } from "@modules/admin/weapon/errors";
-import { MatchStateResponse } from "@modules/user/match/dto";
+import {
+	MatchStateCharacterSummaryResponse,
+	MatchStateResponse,
+} from "@modules/user/match/dto";
 import { GenshinBanpickCls } from "@utils";
 import {
 	MatchSessionStatus,
@@ -97,6 +101,7 @@ export class MatchService {
 		private readonly matchSessionRepo: MatchSessionRepository,
 		private readonly banPickSlotRepo: BanPickSlotRepository,
 		private readonly accountCharacterRepo: AccountCharacterRepository,
+		private readonly characterCostRepo: CharacterCostRepository,
 		private readonly characterRepo: CharacterRepository,
 		private readonly weaponRepo: WeaponRepository,
 		private readonly sessionRecordRepo: SessionRecordRepository,
@@ -499,7 +504,11 @@ export class MatchService {
 			throw new MatchAlreadyCompletedError();
 		}
 		const matchState = await this.matchStateRepo.findOneOrCreate(matchId);
-		return await this.syncMatchStateWithCurrentSession(match, matchState);
+		const syncedMatchState = await this.syncMatchStateWithCurrentSession(
+			match,
+			matchState,
+		);
+		return await this.buildMatchStateResponse(syncedMatchState);
 	}
 
 	async startMatch(matchId: string) {
@@ -931,12 +940,119 @@ export class MatchService {
 			match,
 			matchState,
 		);
+		const response = await this.buildMatchStateResponse(savedMatchState);
 		this.socketMatchService.emitToMatch(
 			matchId,
 			SocketEvents.UPDATE_MATCH_STATE,
-			MatchStateResponse.fromEntity(savedMatchState),
+			response,
 		);
 		return savedMatchState;
+	}
+
+	private async buildMatchStateResponse(matchState: MatchStateEntity) {
+		const [blueSelectedCharacterSummaries, redSelectedCharacterSummaries] =
+			await Promise.all([
+				this.buildSideSelectedCharacterSummaries(
+					matchState.currentSession,
+					"BLUE",
+				),
+				this.buildSideSelectedCharacterSummaries(
+					matchState.currentSession,
+					"RED",
+				),
+			]);
+
+		return MatchStateResponse.fromEntity(matchState, {
+			blueSelectedCharacterSummaries,
+			redSelectedCharacterSummaries,
+		});
+	}
+
+	private async buildSideSelectedCharacterSummaries(
+		matchSessionId: number,
+		side: "BLUE" | "RED",
+	) {
+		const pickSlots = await this.banPickSlotRepo.find({
+			where: {
+				matchSessionId,
+				matchSide: side,
+				slotType: "PICK",
+				slotStatus: "LOCKED",
+			},
+			order: { teamOrder: "ASC" },
+		});
+
+		const characterStateCache = new Map<
+			string,
+			{
+				constellation: number;
+				level: number;
+				element: number;
+				weaponType: number;
+			} | null
+		>();
+		const characterCostCache = new Map<string, number>();
+		const summaries: MatchStateCharacterSummaryResponse[] = [];
+
+		for (const slot of pickSlots) {
+			if (!slot.characterId || !slot.selectedByAccountId) {
+				continue;
+			}
+
+			const cacheKey = `${slot.selectedByAccountId}:${slot.characterId}`;
+			let characterState = characterStateCache.get(cacheKey);
+			if (characterState === undefined) {
+				const selectedAccountCharacter =
+					await this.accountCharacterRepo.findOne({
+						where: {
+							accountId: slot.selectedByAccountId,
+							characterId: slot.characterId,
+						},
+						relations: {
+							character: true,
+						},
+					});
+
+				characterState = selectedAccountCharacter
+					? {
+							constellation: selectedAccountCharacter.activatedConstellation,
+							level: selectedAccountCharacter.characterLevel,
+							element: selectedAccountCharacter.character.element,
+							weaponType: selectedAccountCharacter.character.weaponType,
+						}
+					: null;
+				characterStateCache.set(cacheKey, characterState);
+			}
+
+			if (!characterState) {
+				continue;
+			}
+
+			const costKey = `${slot.characterId}:${characterState.constellation}`;
+			let cost = characterCostCache.get(costKey);
+			if (cost === undefined) {
+				const selectedCharacterCost = await this.characterCostRepo.findOne({
+					where: {
+						characterId: slot.characterId,
+						constellation: characterState.constellation,
+					},
+					select: { cost: true },
+				});
+				cost = Number(selectedCharacterCost?.cost ?? 0);
+				characterCostCache.set(costKey, cost);
+			}
+
+			summaries.push({
+				characterId: String(slot.characterId),
+				level: characterState.level,
+				constellation: characterState.constellation,
+				cost,
+				element: characterState.element,
+				weaponType: characterState.weaponType,
+			});
+		}
+
+		return summaries;
 	}
 
 	private normalizePlayerSide(playerSide: PlayerSide) {
