@@ -531,4 +531,20 @@ export const rawWeaps: DeepPartial<WeaponEntity>[] = [
 		rarity: WeaponRarity.WEAPON_NORMAL,
 		type: WeaponType.POLEARM,
 	},
+	{
+		key: "golden_frostbound_oath",
+		name: "Golden Frostbound Oath",
+		iconUrl:
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1775804486/360_lwpavp.png",
+		rarity: WeaponRarity.WEAPON_SS,
+		type: WeaponType.BOW,
+	},
+	{
+		key: "gest_of_the_mighty_wolf",
+		name: "Gest of the Mighty Wolf",
+		iconUrl:
+			"https://res.cloudinary.com/dphtvhtvf/image/upload/v1775804486/i_n12515_dpl8mk.png",
+		rarity: WeaponRarity.WEAPON_S,
+		type: WeaponType.CLAYMORE,
+	},
 ];
