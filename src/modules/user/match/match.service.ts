@@ -14,7 +14,7 @@ import {
 	MatchSessionEntity,
 	MatchStateEntity,
 } from "@db/entities";
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Delete, Injectable } from "@nestjs/common";
 import { AccountCharacterNotFoundError } from "@modules/account-character/errors";
 import { WeaponNotFoundError } from "@modules/admin/weapon/errors";
 import {
@@ -43,6 +43,7 @@ import {
 	SupachaiLimitReachedError,
 	WeaponPickRequiresSelectedCharacterError,
 	TravellerAlreadyPickedError,
+	DeletePermissionError,
 } from "./errors";
 import { SupachaiPickSlotNotFoundError } from "./errors/supachai-pick-slot-not-found.error";
 import { DraftTimerService } from "./draft-timer.service";
@@ -431,7 +432,9 @@ export class MatchService {
 	}
 
 	async findMany(query: MatchQuery) {
-		const statusFilter = { status: Not(MatchStatus.CANCELLED) };
+		const statusFilter = {
+			status: Not(In([MatchStatus.CANCELLED, MatchStatus.DELETED])),
+		};
 		const where = query.accountId
 			? [
 					{ ...statusFilter, hostId: query.accountId },
@@ -479,21 +482,13 @@ export class MatchService {
 
 	@Transactional()
 	async deleteOne(id: string) {
-		await this.findOne(id, { isHost: true, isNotStarted: true });
+		const hostId = this.cls.get("profile.id");
+		const match = await this.matchRepo.findOne({ where: { id, hostId } });
+		if (!match) {
+			throw new DeletePermissionError();
+		}
 		this.draftTimerService.cancel(id);
-		const sessions = await this.matchSessionRepo.find({
-			where: { matchId: id, isDeleted: false },
-			select: { id: true },
-		});
-		const sessionIds = sessions.map((session) => session.id);
-		await Promise.all([
-			this.matchRepo.delete(id),
-			this.matchStateRepo.delete({ matchId: id }),
-			sessionIds.length
-				? this.banPickSlotRepo.delete({ matchSessionId: In(sessionIds) })
-				: Promise.resolve(),
-			this.matchSessionRepo.delete({ matchId: id }),
-		]);
+		await this.matchRepo.update(id, { status: MatchStatus.DELETED });
 		this.socketMatchService.emitToMatch(id, SocketEvents.MATCH_DELETED);
 	}
 
