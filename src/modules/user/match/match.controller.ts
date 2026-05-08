@@ -23,6 +23,7 @@ import {
 	MatchQuery,
 	MatchResponse,
 	MatchStateResponse,
+	TurnActionRequest,
 } from "./dto";
 import { MatchService } from "./match.service";
 import { CompleteSessionRequest } from "./dto/complete-session.request";
@@ -110,8 +111,9 @@ export class MatchController {
 	async pickChar(
 		@Param("id", ParseUUIDPipe) id: string,
 		@Param("charId", ParseIntPipe) charId: number,
+		@Body() dto: TurnActionRequest,
 	) {
-		await this.matchService.pickChar(id, charId);
+		await this.matchService.pickChar(id, charId, dto?.clientActionAt);
 		return BaseApiResponse.success();
 	}
 
@@ -121,8 +123,9 @@ export class MatchController {
 	async banChar(
 		@Param("id", ParseUUIDPipe) id: string,
 		@Param("charId", ParseIntPipe) charId: number,
+		@Body() dto: TurnActionRequest,
 	) {
-		await this.matchService.banChar(id, charId);
+		await this.matchService.banChar(id, charId, dto?.clientActionAt);
 		return BaseApiResponse.success();
 	}
 

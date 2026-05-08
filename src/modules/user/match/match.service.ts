@@ -1090,7 +1090,7 @@ export class MatchService {
 	}
 
 	@Transactional()
-	async pickChar(matchId: string, charId: number) {
+	async pickChar(matchId: string, charId: number, clientActionAt?: string) {
 		const playerId = this.cls.get("profile.id");
 		const match = await this.findOne(matchId);
 		if ([MatchStatus.COMPLETED, MatchStatus.CANCELLED].includes(match.status)) {
@@ -1104,7 +1104,7 @@ export class MatchService {
 		}
 
 		this.ensureCorrectTurn(matchState, playerSide);
-		this.deductTimeBank(matchState, playerSide);
+		this.deductTimeBank(matchState, playerSide, clientActionAt);
 
 		const selectedAccountCharacter = await this.accountCharacterRepo.findOne({
 			where: {
@@ -1154,7 +1154,7 @@ export class MatchService {
 	}
 
 	@Transactional()
-	async banChar(matchId: string, charId: number) {
+	async banChar(matchId: string, charId: number, clientActionAt?: string) {
 		const playerId = this.cls.get("profile.id");
 		const match = await this.findOne(matchId);
 		if ([MatchStatus.COMPLETED, MatchStatus.CANCELLED].includes(match.status)) {
@@ -1168,7 +1168,7 @@ export class MatchService {
 		}
 
 		this.ensureCorrectTurn(matchState, playerSide);
-		this.deductTimeBank(matchState, playerSide);
+		this.deductTimeBank(matchState, playerSide, clientActionAt);
 
 		// For bans: only check current session (don't carry forward bans from previous sessions).
 		// Picks carry forward but bans do not.
@@ -1195,13 +1195,51 @@ export class MatchService {
 	 * Deduct time from the player's time bank if the turn took longer than TURN_DURATION_SECONDS.
 	 * Throws if the bank would go negative (turn was already auto-skipped by the server).
 	 */
-	private deductTimeBank(matchState: MatchStateEntity, playerSide: PlayerSide) {
+	private resolveEffectiveActionAt(
+		matchState: MatchStateEntity,
+		clientActionAt?: string,
+	) {
+		const serverNow = Date.now();
+		if (!clientActionAt) {
+			return serverNow;
+		}
+
+		const parsed = new Date(clientActionAt).getTime();
+		if (Number.isNaN(parsed)) {
+			return serverNow;
+		}
+
+		const maxFutureToleranceMs = 2_000;
+		if (parsed > serverNow + maxFutureToleranceMs) {
+			return serverNow;
+		}
+
+		if (matchState.turnStartedAt) {
+			const turnStartedAtMs = matchState.turnStartedAt.getTime();
+			if (parsed < turnStartedAtMs) {
+				return turnStartedAtMs;
+			}
+		}
+
+		return Math.min(parsed, serverNow);
+	}
+
+	private deductTimeBank(
+		matchState: MatchStateEntity,
+		playerSide: PlayerSide,
+		clientActionAt?: string,
+	) {
 		if (!matchState.turnStartedAt) {
 			return;
 		}
 
+		const effectiveActionAtMs = this.resolveEffectiveActionAt(
+			matchState,
+			clientActionAt,
+		);
+
 		const elapsedSeconds =
-			(Date.now() - matchState.turnStartedAt.getTime()) / 1000;
+			(effectiveActionAtMs - matchState.turnStartedAt.getTime()) / 1000;
 		const overtime = elapsedSeconds - TURN_DURATION_SECONDS;
 
 		if (overtime <= 0) {
