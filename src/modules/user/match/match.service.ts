@@ -263,8 +263,8 @@ export class MatchService {
 			return { blueUsedChars: [], redUsedChars: [] };
 		}
 
-		const blueUsedCharacters = new Set(matchState.blueUsedChars ?? []);
-		const redUsedCharacters = new Set(matchState.redUsedChars ?? []);
+		const blueUsedCharacters = new Set<string>();
+		const redUsedCharacters = new Set<string>();
 
 		const previousSessions = await this.matchSessionRepo.find({
 			where: {
@@ -276,10 +276,7 @@ export class MatchService {
 		});
 
 		if (!previousSessions.length) {
-			return {
-				blueUsedChars: [...blueUsedCharacters],
-				redUsedChars: [...redUsedCharacters],
-			};
+			return { blueUsedChars: [], redUsedChars: [] };
 		}
 
 		const previousSessionIds = previousSessions.map((session) => session.id);
@@ -289,13 +286,18 @@ export class MatchService {
 				slotType: "PICK",
 				slotStatus: "LOCKED",
 			},
-			select: { characterId: true, matchSide: true },
+			select: { characterId: true, selectedByAccountId: true },
 		});
 
 		previousSlots.forEach((slot) => {
-			if (slot.matchSide === "BLUE") {
+			if (!slot.selectedByAccountId) {
+				return;
+			}
+			if (slot.selectedByAccountId === currentSession.blueParticipantId) {
 				blueUsedCharacters.add(String(slot.characterId));
-			} else {
+				return;
+			}
+			if (slot.selectedByAccountId === currentSession.redParticipantId) {
 				redUsedCharacters.add(String(slot.characterId));
 			}
 		});
@@ -601,17 +603,38 @@ export class MatchService {
 	private async ensureCharacterNotUsedInSession(
 		matchSessionId: number,
 		characterId: number,
+		allowBanned = false,
 	) {
-		const existed = await this.banPickSlotRepo.exists({
+		// For normal picks/bans: block if character was already PICKED in this session.
+		// For Supachai (allowBanned=true): also block if already PICKED, but allow banned chars.
+		// Business rule: Supachai allows picking any character from roster except already-picked.
+		const existingPick = await this.banPickSlotRepo.exists({
 			where: {
 				matchSessionId,
 				characterId,
+				slotType: "PICK",
 				slotStatus: "LOCKED",
 			},
 		});
 
-		if (existed) {
+		if (existingPick) {
 			throw new CharacterAlreadyUsedError();
+		}
+
+		// During normal draft (non-Supachai), also block if already BANNED.
+		if (!allowBanned) {
+			const existingBan = await this.banPickSlotRepo.exists({
+				where: {
+					matchSessionId,
+					characterId,
+					slotType: "BAN",
+					slotStatus: "LOCKED",
+				},
+			});
+
+			if (existingBan) {
+				throw new CharacterAlreadyUsedError();
+			}
 		}
 	}
 
@@ -1518,15 +1541,6 @@ export class MatchService {
 		if (!selectedAccountCharacter) {
 			throw new AccountCharacterNotFoundError();
 		}
-
-		await this.ensureCharacterNotUsedInSession(matchSession.id, toCharId);
-		await this.ensureCharacterNotUsedInPreviousSessions(
-			match,
-			matchSession,
-			matchState,
-			playerSide,
-			toCharId,
-		);
 
 		const sideUsedChars =
 			playerSide === PlayerSide.BLUE
