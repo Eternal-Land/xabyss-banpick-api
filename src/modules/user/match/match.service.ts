@@ -263,8 +263,8 @@ export class MatchService {
 			return { blueUsedChars: [], redUsedChars: [] };
 		}
 
-		const blueUsedCharacters = new Set<string>();
-		const redUsedCharacters = new Set<string>();
+		const blueUsedCharacters = new Set(matchState.blueUsedChars ?? []);
+		const redUsedCharacters = new Set(matchState.redUsedChars ?? []);
 
 		const previousSessions = await this.matchSessionRepo.find({
 			where: {
@@ -276,7 +276,10 @@ export class MatchService {
 		});
 
 		if (!previousSessions.length) {
-			return { blueUsedChars: [], redUsedChars: [] };
+			return {
+				blueUsedChars: [...blueUsedCharacters],
+				redUsedChars: [...redUsedCharacters],
+			};
 		}
 
 		const previousSessionIds = previousSessions.map((session) => session.id);
@@ -1546,7 +1549,8 @@ export class MatchService {
 			playerSide === PlayerSide.BLUE
 				? new Set(matchState.blueUsedChars ?? [])
 				: new Set(matchState.redUsedChars ?? []);
-		sideUsedChars.add(String(selectedPickSlot.characterId));
+		// Supachai: count both target and replacement as used characters.
+		sideUsedChars.add(String(fromCharId));
 		sideUsedChars.add(String(toCharId));
 		if (playerSide === PlayerSide.BLUE) {
 			matchState.blueUsedChars = [...sideUsedChars];
