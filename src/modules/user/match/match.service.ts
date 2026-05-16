@@ -384,13 +384,20 @@ export class MatchService {
 		}
 
 		const currentSession = await this.getCurrentMatchSession(match, matchState);
-		const carriedUsedChars = await this.getUsedCharactersBeforeCurrentSession(
-			match,
-			currentSession,
-			matchState,
-		);
-		matchState.blueUsedChars = carriedUsedChars.blueUsedChars;
-		matchState.redUsedChars = carriedUsedChars.redUsedChars;
+		if (
+			!(
+				match.status === MatchStatus.WAITING &&
+				currentSession.sessionStatus === MatchSessionStatus.PENDING
+			)
+		) {
+			const carriedUsedChars = await this.getUsedCharactersBeforeCurrentSession(
+				match,
+				currentSession,
+				matchState,
+			);
+			matchState.blueUsedChars = carriedUsedChars.blueUsedChars;
+			matchState.redUsedChars = carriedUsedChars.redUsedChars;
+		}
 
 		// Fetch ALL slots (LOCKED + SKIPPED) for total draftStep count
 		const allSlots = await this.banPickSlotRepo.find({
