@@ -81,3 +81,4 @@ return new ApiResponseDto(data, pagination, message)
 - Use `nestjs-cls` for request-scoped transactions
 - Entity files use decorators (`@Entity`, `@Column`, etc.)
 - Ban-pick special-cost inputs live on `match_state` as `blueSpecialCost` and `redSpecialCost`, and session-cost recalculation reads those values when computing time bonus.
+- BO3/BO5 session completion should leave the match in `WAITING`; the host chooses the next session blue participant through `continue-session`, and match-side carry-over must remap from the just-finished session at that point instead of auto-swapping on completion.
