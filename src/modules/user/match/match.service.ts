@@ -30,7 +30,7 @@ import {
 } from "@utils/enums";
 import { ClsService } from "nestjs-cls";
 import { Transactional } from "typeorm-transactional";
-import { CreateMatchRequest, MatchQuery } from "./dto";
+import { ContinueSessionRequest, CreateMatchRequest, MatchQuery } from "./dto";
 import {
 	MatchAlreadyCompletedError,
 	MatchAlreadyStartedError,
@@ -664,7 +664,7 @@ export class MatchService {
 	}
 
 	@Transactional()
-	async continueCurrentSession(matchId: string) {
+	async continueCurrentSession(matchId: string, dto?: ContinueSessionRequest) {
 		const match = await this.findOne(matchId, { isHost: true });
 		if ([MatchStatus.COMPLETED, MatchStatus.CANCELLED].includes(match.status)) {
 			throw new MatchAlreadyCompletedError();
@@ -681,13 +681,60 @@ export class MatchService {
 			throw new BadRequestException("Current session is not pending");
 		}
 
+		const selectedBluePlayerId = dto?.nextBluePlayerId ?? match.bluePlayerId;
+		if (
+			selectedBluePlayerId !== match.bluePlayerId &&
+			selectedBluePlayerId !== match.redPlayerId
+		) {
+			throw new BadRequestException(
+				"Selected blue player is not a match participant",
+			);
+		}
+
+		const selectedRedPlayerId =
+			selectedBluePlayerId === match.bluePlayerId
+				? match.redPlayerId
+				: match.bluePlayerId;
+		const keepCurrentBlueFirst = selectedBluePlayerId === match.bluePlayerId;
+		const nextBlueSupachaiUsedCount = keepCurrentBlueFirst
+			? matchState.blueSupachaiUsedCount
+			: matchState.redSupachaiUsedCount;
+		const nextRedSupachaiUsedCount = keepCurrentBlueFirst
+			? matchState.redSupachaiUsedCount
+			: matchState.blueSupachaiUsedCount;
+		const nextBlueUsedChars =
+			currentSession.sessionIndex === BO5_SESSION_COUNT &&
+			match.sessionCount === BO5_SESSION_COUNT
+				? []
+				: keepCurrentBlueFirst
+					? matchState.blueUsedChars
+					: matchState.redUsedChars;
+		const nextRedUsedChars =
+			currentSession.sessionIndex === BO5_SESSION_COUNT &&
+			match.sessionCount === BO5_SESSION_COUNT
+				? []
+				: keepCurrentBlueFirst
+					? matchState.redUsedChars
+					: matchState.blueUsedChars;
+
+		currentSession.blueParticipantId = selectedBluePlayerId;
+		currentSession.redParticipantId = selectedRedPlayerId;
 		currentSession.sessionStatus = MatchSessionStatus.LIVE;
 		await this.matchSessionRepo.save(currentSession);
 
 		matchState.turnStartedAt = new Date();
+		matchState.currentTurn = PlayerSide.BLUE;
+		matchState.blueSupachaiUsedCount = nextBlueSupachaiUsedCount;
+		matchState.redSupachaiUsedCount = nextRedSupachaiUsedCount;
+		matchState.blueUsedChars = nextBlueUsedChars;
+		matchState.redUsedChars = nextRedUsedChars;
 		await this.matchStateRepo.save(matchState);
 
-		await this.matchRepo.update(matchId, { status: MatchStatus.LIVE });
+		await this.matchRepo.update(matchId, {
+			status: MatchStatus.LIVE,
+			bluePlayerId: selectedBluePlayerId,
+			redPlayerId: selectedRedPlayerId,
+		});
 
 		const updatedMatch = await this.findOne(matchId);
 		await this.saveAndBroadcastMatchState(matchId, updatedMatch);
@@ -1615,6 +1662,11 @@ export class MatchService {
 			where: { matchId, isDeleted: false },
 			order: { sessionIndex: "ASC", id: "ASC" },
 		});
+		const firstSession = sessions[0];
+		const canonicalBluePlayerId =
+			firstSession?.blueParticipantId ?? match.bluePlayerId;
+		const canonicalRedPlayerId =
+			firstSession?.redParticipantId ?? match.redPlayerId;
 
 		let blueWins = 0;
 		let redWins = 0;
@@ -1627,13 +1679,13 @@ export class MatchService {
 			const sessionWinnerSide = session.winnerSide;
 
 			if (sessionWinnerSide === PlayerSide.BLUE) {
-				if (session.blueParticipantId === match.bluePlayerId) {
+				if (session.blueParticipantId === canonicalBluePlayerId) {
 					blueWins++;
 				} else {
 					redWins++;
 				}
 			} else if (sessionWinnerSide === PlayerSide.RED) {
-				if (session.redParticipantId === match.redPlayerId) {
+				if (session.redParticipantId === canonicalRedPlayerId) {
 					redWins++;
 				} else {
 					blueWins++;
@@ -1655,6 +1707,27 @@ export class MatchService {
 				(s) => s.sessionStatus === MatchSessionStatus.PENDING,
 			);
 			if (nextSession) {
+				const currentBluePlayerCarryOver =
+					currentSession.blueParticipantId === match.bluePlayerId
+						? {
+								usedChars: matchState.blueUsedChars,
+								supachaiUsedCount: matchState.blueSupachaiUsedCount,
+							}
+						: {
+								usedChars: matchState.redUsedChars,
+								supachaiUsedCount: matchState.redSupachaiUsedCount,
+							};
+				const currentRedPlayerCarryOver =
+					currentSession.redParticipantId === match.redPlayerId
+						? {
+								usedChars: matchState.redUsedChars,
+								supachaiUsedCount: matchState.redSupachaiUsedCount,
+							}
+						: {
+								usedChars: matchState.blueUsedChars,
+								supachaiUsedCount: matchState.blueSupachaiUsedCount,
+							};
+
 				// Re-assign matchState to the next session, but keep the match waiting
 				// until the host explicitly continues.
 				await this.matchStateRepo.update(
@@ -1672,27 +1745,17 @@ export class MatchService {
 						redTimeBank: TIME_BANK_SECONDS,
 						turnStartedAt: null,
 						draftStep: 0,
-						blueSupachaiUsedCount: matchState.redSupachaiUsedCount,
-						redSupachaiUsedCount: matchState.blueSupachaiUsedCount,
+						blueSupachaiUsedCount: currentBluePlayerCarryOver.supachaiUsedCount,
+						redSupachaiUsedCount: currentRedPlayerCarryOver.supachaiUsedCount,
 						blueSupachaiUsedSessionCount: 0,
 						redSupachaiUsedSessionCount: 0,
-						blueUsedChars:
-							nextSession.sessionIndex === BO5_SESSION_COUNT &&
-							match.sessionCount === BO5_SESSION_COUNT
-								? []
-								: matchState.redUsedChars,
-						redUsedChars:
-							nextSession.sessionIndex === BO5_SESSION_COUNT &&
-							match.sessionCount === BO5_SESSION_COUNT
-								? []
-								: matchState.blueUsedChars,
+						blueUsedChars: currentBluePlayerCarryOver.usedChars,
+						redUsedChars: currentRedPlayerCarryOver.usedChars,
 					},
 				);
 
 				await this.matchRepo.update(matchId, {
 					status: MatchStatus.WAITING,
-					bluePlayerId: match.redPlayerId,
-					redPlayerId: match.bluePlayerId,
 				});
 			} else {
 				// Defensive terminal guard: if there is no pending session left,

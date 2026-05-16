@@ -20,6 +20,7 @@ import {
 } from "@utils";
 import {
 	CreateMatchRequest,
+	ContinueSessionRequest,
 	MatchQuery,
 	MatchResponse,
 	MatchStateResponse,
@@ -99,8 +100,11 @@ export class MatchController {
 	@Post(":id/continue-session")
 	@SwaggerBaseApiMessageResponse()
 	@ApiBearerAuth()
-	async continueSession(@Param("id", ParseUUIDPipe) id: string) {
-		await this.matchService.continueCurrentSession(id);
+	async continueSession(
+		@Param("id", ParseUUIDPipe) id: string,
+		@Body() dto: ContinueSessionRequest,
+	) {
+		await this.matchService.continueCurrentSession(id, dto);
 		return BaseApiResponse.success();
 	}
 
