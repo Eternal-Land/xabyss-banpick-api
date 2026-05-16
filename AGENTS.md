@@ -82,3 +82,4 @@ return new ApiResponseDto(data, pagination, message)
 - Entity files use decorators (`@Entity`, `@Column`, etc.)
 - Ban-pick special-cost inputs live on `match_state` as `blueSpecialCost` and `redSpecialCost`, and session-cost recalculation reads those values when computing time bonus.
 - BO3/BO5 session completion should leave the match in `WAITING`; the host chooses the next session blue participant through `continue-session`, and match-side carry-over must remap from the just-finished session at that point instead of auto-swapping on completion.
+- While a BO3/BO5 match is `WAITING` on a pending next session, do not re-sync `match_state.blueUsedChars` / `redUsedChars` against that pending session's placeholder participants; preserve the saved player carry-over until `continue-session` remaps it.
